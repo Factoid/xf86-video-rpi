@@ -1,0 +1,4 @@
+Installation
+------------
+./build.sh will build and deploy the library to /usr/local/lib/xorg/modules,
+and copy some configuration file in ./config to /usr/share/X11/xorg.conf.d/

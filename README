@@ -1,0 +1,8 @@
+Overview
+--------
+Rasberry Pi DDX driver for the XFree86 windowing system. Rasberry Pi is built
+around the broadcom BCM2835 system on a chip (SoC), which couples an arm
+processor with their proprietary videocore IV GPU. The Rasberry Pi foundation
+has released an API for low level and OpenGL support. This driver's purpose
+is to provide hardware accelerated 2D and 3D support either natively or through
+Glamor.
