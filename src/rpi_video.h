@@ -11,6 +11,22 @@
 #define VIDEOCORE_IV 12345
 #define XF86_VERSION_CURRENT 123456790
 
+#define INFO_MSG(fmt, ...) \
+		do { xf86DrvMsg(pScrn->scrnIndex, X_INFO, fmt "\n",\
+				##__VA_ARGS__); } while (0)
+#define CONFIG_MSG(fmt, ...) \
+		do { xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, fmt "\n",\
+				##__VA_ARGS__); } while (0)
+#define WARNING_MSG(fmt, ...) \
+		do { xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "WARNING: " fmt "\n",\
+				##__VA_ARGS__); } while (0)
+#define ERROR_MSG(fmt, ...) \
+		do { xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "ERROR: " fmt "\n",\
+				##__VA_ARGS__); } while (0)
+#define EARLY_ERROR_MSG(fmt, ...) \
+		do { xf86Msg(X_ERROR, "ERROR: " fmt "\n",\
+				##__VA_ARGS__); } while (0)
+
 typedef enum {
 	OPTION_HW_CURSOR,
 	OPTION_NOACCEL
@@ -19,6 +35,7 @@ typedef enum {
 typedef struct {
 	Bool noAccel;
 	Bool hwCursor;
+	EntityInfoPtr EntityInfo;
 	CloseScreenProcPtr CloseScreen;
 	OptionInfoPtr Options;
 } RPIRec, *RPIPtr;

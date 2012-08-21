@@ -56,9 +56,12 @@ static Bool RPIProbe(DriverPtr drv, int flags)
 
 	for( i = 0; i < numDevSections; ++i )
 	{
-		ScrnInfoPtr sInfo = xf86AllocateScreen(drv, 0);	
+		ScrnInfoPtr sInfo = xf86AllocateScreen(drv, 0);
+		int entity = xf86ClaimNoSlot(drv, 0, devSections[i], TRUE);
+		xf86AddEntityToScreen(sInfo,entity); 
 		sInfo->driverVersion = VERSION;
 		sInfo->driverName = RPI_DRIVER_NAME;
+		sInfo->name = RPI_NAME;
 		sInfo->Probe = RPIProbe;
 		sInfo->PreInit = RPIPreInit;
 		sInfo->ScreenInit = RPIScreenInit;
@@ -108,50 +111,148 @@ static Bool RPIGetRec(ScrnInfoPtr pScrn)
 {
 	if( pScrn->driverPrivate != NULL ) return TRUE;
 	pScrn->driverPrivate = xnfcalloc(sizeof(RPIRec), 1);
+	if( pScrn->driverPrivate == NULL ) return FALSE;
 	return TRUE;
 }
 
 static void RPIFreeRec(ScrnInfoPtr pScrn)
 {
 	if( pScrn->driverPrivate == NULL ) return;
-
 	free(pScrn->driverPrivate);
 	pScrn->driverPrivate = NULL;
 }
 
 static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
+	RPIPtr pRPI;
+	int default_depth, fbbpp;
+	rgb defaultWeight = { 0, 0, 0 };
+	rgb defaultMask = { 0, 0, 0 };
+	Gamma defaultGamma = { 0.0, 0.0, 0.0 };
+	uint64_t value;
+	int i;
+
+	INFO_MSG( "Beginning PreInit" );
+
+	if( pScrn->numEntities != 1 )
+	{
+		ERROR_MSG("Driver expected 1 entity, found %d for screen %d", pScrn->numEntities, pScrn->scrnIndex );
+		return FALSE;
+	}
+
+	RPIGetRec(pScrn);
+	pRPI = RPIPTR(pScrn);
+
+	pRPI->EntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
+	pScrn->monitor = pScrn->confScreen->monitor;
+
+	INFO_MSG( "Init depth" );
+	default_depth = 24;
+	fbbpp = 32;
+	if( !xf86SetDepthBpp(pScrn, default_depth, 0, fbbpp, Support32bppFb) )
+	{
+		goto fail;
+	}
+	xf86PrintDepthBpp(pScrn);
+
+	INFO_MSG( "Init weight" );
+	if( !xf86SetWeight(pScrn, defaultWeight, defaultMask ))
+	{
+		goto fail;
+	}
+
+	INFO_MSG( "Init gamma" );
+	if( !xf86SetGamma(pScrn, defaultGamma))
+	{
+		goto fail;
+	}
+
+	INFO_MSG( "Init visual" );
+	if( !xf86SetDefaultVisual(pScrn, -1))
+	{
+		goto fail;
+	}
+
+	if( pScrn->depth < 16 )
+	{
+		ERROR_MSG("The requested default visual (%s) has an unsupported depth (%d).", xf86GetVisualName(pScrn->defaultVisual), pScrn->depth);
+		goto fail; 
+	}
+	pScrn->progClock = TRUE;
+
+	INFO_MSG( "Handle options" );
+	xf86CollectOptions(pScrn,NULL);
+	if(!(pRPI->Options = calloc(1, sizeof(RPIOptions))))
+	{
+		return FALSE;
+	}
+	memcpy(pRPI->Options, RPIOptions, sizeof(RPIOptions));
+	xf86ProcessOptions(pScrn->scrnIndex, pRPI->EntityInfo->device->options, pRPI->Options);
+
+	INFO_MSG( "Setting the video modes" );
+	xf86SetDpi(pScrn,0,0);
+
+	switch(pScrn->bitsPerPixel)
+	{
+	case 16:
+	case 24:
+	case 32:
+		break;
+	default:
+		ERROR_MSG( "The requested depth (%d) is unsupported", pScrn->bitsPerPixel);
+		goto fail;
+	}
+
+	INFO_MSG( "Loading sub modules" );
+	if( !xf86LoadSubModule( pScrn, "fb" ) )
+	{
+		goto fail;
+	}
+
+	INFO_MSG( "PreInit success" );
 	return TRUE;
+
+fail:
+	INFO_MSG( "PriInit fail" );
+	RPIFreeRec(pScrn);
+	return FALSE;
 }
 
 static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 {
+	INFO_MSG("RPIModeInit");
 	return TRUE;
 }
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScrn, int argc, char** argv )
 {
+	xf86Msg( X_INFO, "RPIScreenInit" );
 	return TRUE;
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)
 {
+	xf86Msg( X_INFO, "RPISwitchMode" );
 	return TRUE;
 }
 
 static void RPIAdjustFrame(int scrnNum, int x, int y, int flags)
 {
+	xf86Msg( X_INFO, "RPIAdjustFrame" );
 }
 
 static Bool RPIEnterVT(int scrnNum, int flags)
 {
+	xf86Msg( X_INFO, "RPIEnterVT" );
 	return TRUE;
 }
 
 static void RPILeaveVT(int scrnNum, int flags)
 {
+	xf86Msg( X_INFO, "RPILeaveVT" );
 }
 
 static void RPIFreeScreen(int scrnNum, int flags)
 {
+	xf86Msg( X_INFO, "RPIFreeScreen" );
 }
