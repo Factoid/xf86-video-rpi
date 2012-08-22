@@ -1,3 +1,4 @@
+#include "xorg-server.h"
 #include "xf86.h"
 #include "xf86_OSproc.h"
 #include "rpi_video.h"
@@ -13,17 +14,17 @@ static DriverRec RPI = {
 };
 
 static SymTabRec RPIChipsets[] = {
-	{ VIDEOCORE_IV, "rpivc4" },
+	{ 0x0314, "Raspberry Pi (BCM2835)" },
 	{ -1, NULL }
 };
 
 static XF86ModuleVersionInfo rpiVersRec =
 {
-	"rpi",
-	MODULEVENDORSTRING,
+	RPI_DRIVER_NAME,
+	RPI_MODULEVENDORSTRING,
 	MODINFOSTRING1,
 	MODINFOSTRING2,
-	XF86_VERSION_CURRENT,
+	XORG_VERSION_CURRENT,
 	RPI_MAJOR_VERSION, RPI_MINOR_VERSION, RPI_PATCHLEVEL,
 	ABI_CLASS_VIDEODRV,
 	ABI_VIDEODRV_VERSION,
@@ -41,7 +42,7 @@ static const OptionInfoRec RPIOptions[] = {
 
 static void RPIIdentify(int flags)
 {
-	xf86PrintChipsets( RPI_NAME, "driver for rpi", RPIChipsets );
+	xf86PrintChipsets( RPI_NAME, "Driver for Raspberry Pi", RPIChipsets );
 }
 
 static Bool RPIProbe(DriverPtr drv, int flags)
@@ -190,6 +191,10 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	xf86ProcessOptions(pScrn->scrnIndex, pRPI->EntityInfo->device->options, pRPI->Options);
 
 	INFO_MSG( "Setting the video modes" );
+	
+//	xf86CrtcSetSizeRange(pScrn,320,200,1024,768);
+//	xf86InitialConfiguration(pScrn,TRUE);
+//	xf86RandR12PreInit(pScrn);
 	xf86SetDpi(pScrn,0,0);
 
 	switch(pScrn->bitsPerPixel)
@@ -210,6 +215,7 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	}
 
 	INFO_MSG( "PreInit success" );
+	
 	return TRUE;
 
 fail:
@@ -224,10 +230,11 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 	return TRUE;
 }
 
-static Bool RPIScreenInit(int scrnNum, ScreenPtr pScrn, int argc, char** argv )
+static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
-	xf86Msg( X_INFO, "RPIScreenInit" );
-	return TRUE;
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+	INFO_MSG("RPIScreenInit");
+	return FALSE;
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)

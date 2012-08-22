@@ -4,12 +4,10 @@
 #define VERSION 0
 #define RPI_NAME "RPI"         /* the name used to prefix messages */
 #define RPI_DRIVER_NAME "rpi"  /* the driver name as used in config file */
+#define RPI_MODULEVENDORSTRING "Adrian's RPI xf86 driver"
 #define RPI_MAJOR_VERSION 0
 #define RPI_MINOR_VERSION 0
 #define RPI_PATCHLEVEL    1
-
-#define VIDEOCORE_IV 12345
-#define XF86_VERSION_CURRENT 123456790
 
 #define INFO_MSG(fmt, ...) \
 		do { xf86DrvMsg(pScrn->scrnIndex, X_INFO, fmt "\n",\
