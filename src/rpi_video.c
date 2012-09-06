@@ -147,9 +147,23 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	pRPI->EntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
 	pScrn->monitor = pScrn->confScreen->monitor;
 
+	INFO_MSG( "Loading sub modules" );
+	if( !xf86LoadSubModule( pScrn, "fbdevhw" ) )
+	{
+		goto fail;
+	}
+
+	INFO_MSG( "calling FBInit" );	
+	if( !fbdevHWInit( pScrn, NULL, "/dev/fb0" ) )
+	{
+		goto fail;
+	}
+
 	INFO_MSG( "Init depth" );
-	default_depth = 24;
+	default_depth = 16;
 	fbbpp = 32;
+	fbdevHWGetDepth(pScrn, &fbbpp);
+	INFO_MSG( "fbdevHWGetDepth set fbbpp = %i", fbbpp );
 	if( !xf86SetDepthBpp(pScrn, default_depth, 0, fbbpp, Support32bppFb) )
 	{
 		goto fail;
@@ -185,16 +199,20 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	xf86CollectOptions(pScrn,NULL);
 	if(!(pRPI->Options = calloc(1, sizeof(RPIOptions))))
 	{
-		return FALSE;
+		goto fail;
 	}
 	memcpy(pRPI->Options, RPIOptions, sizeof(RPIOptions));
 	xf86ProcessOptions(pScrn->scrnIndex, pRPI->EntityInfo->device->options, pRPI->Options);
 
+
 	INFO_MSG( "Setting the video modes" );
-	
-//	xf86CrtcSetSizeRange(pScrn,320,200,1024,768);
-//	xf86InitialConfiguration(pScrn,TRUE);
-//	xf86RandR12PreInit(pScrn);
+	fbdevHWUseBuildinMode(pScrn);
+
+	INFO_MSG( "dismodes = %p", pScrn->display->modes );
+	INFO_MSG( "Mode = %p", pScrn->modes );	
+	INFO_MSG( "Mon = %p", pScrn->monitor );
+	char* name = fbdevHWGetName(pScrn);
+	INFO_MSG( "scrn name = %s", name );
 	xf86SetDpi(pScrn,0,0);
 
 	switch(pScrn->bitsPerPixel)
@@ -205,12 +223,6 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 		break;
 	default:
 		ERROR_MSG( "The requested depth (%d) is unsupported", pScrn->bitsPerPixel);
-		goto fail;
-	}
-
-	INFO_MSG( "Loading sub modules" );
-	if( !xf86LoadSubModule( pScrn, "fb" ) )
-	{
 		goto fail;
 	}
 
@@ -234,7 +246,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	INFO_MSG("RPIScreenInit");
-	return FALSE;
+	return TRUE;
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)
