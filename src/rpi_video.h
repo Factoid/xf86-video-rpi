@@ -33,6 +33,8 @@ typedef enum {
 typedef struct {
 	Bool noAccel;
 	Bool hwCursor;
+	unsigned char* fbmem;
+	unsigned char* fbstart;	
 	EntityInfoPtr EntityInfo;
 	CloseScreenProcPtr CloseScreen;
 	OptionInfoPtr Options;

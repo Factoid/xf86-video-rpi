@@ -1,6 +1,7 @@
 #include "xorg-server.h"
 #include "xf86.h"
 #include "xf86_OSproc.h"
+#include "micmap.h"
 #include "rpi_video.h"
 
 static DriverRec RPI = {
@@ -52,6 +53,11 @@ static Bool RPIProbe(DriverPtr drv, int flags)
 	int *usedChips;
 	int i;
 	Bool foundScreen = FALSE;
+
+	if( !xf86LoadDrvSubModule( drv, "fbdevhw" ) )
+	{
+		return FALSE;
+	}
 
 	if( (numDevSections = xf86MatchDevice(RPI_DRIVER_NAME,&devSections)) <= 0 ) return FALSE;
 
@@ -123,6 +129,10 @@ static void RPIFreeRec(ScrnInfoPtr pScrn)
 	pScrn->driverPrivate = NULL;
 }
 
+static void RPISave( ScrnInfoPtr pScrn )
+{
+}
+
 static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
 	RPIPtr pRPI;
@@ -141,17 +151,15 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 		return FALSE;
 	}
 
+	if (xf86LoadSubModule(pScrn, "fb") == NULL) {
+		return FALSE;
+	}
+
 	RPIGetRec(pScrn);
 	pRPI = RPIPTR(pScrn);
 
 	pRPI->EntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
 	pScrn->monitor = pScrn->confScreen->monitor;
-
-	INFO_MSG( "Loading sub modules" );
-	if( !xf86LoadSubModule( pScrn, "fbdevhw" ) )
-	{
-		goto fail;
-	}
 
 	INFO_MSG( "calling FBInit" );	
 	if( !fbdevHWInit( pScrn, NULL, "/dev/fb0" ) )
@@ -160,11 +168,8 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	}
 
 	INFO_MSG( "Init depth" );
-	default_depth = 16;
-	fbbpp = 32;
-	fbdevHWGetDepth(pScrn, &fbbpp);
-	INFO_MSG( "fbdevHWGetDepth set fbbpp = %i", fbbpp );
-	if( !xf86SetDepthBpp(pScrn, default_depth, 0, fbbpp, Support32bppFb) )
+	default_depth = fbdevHWGetDepth(pScrn, &fbbpp);
+	if( !xf86SetDepthBpp(pScrn, default_depth, default_depth, fbbpp, Support32bppFb) )
 	{
 		goto fail;
 	}
@@ -194,10 +199,13 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 		goto fail; 
 	}
 	pScrn->progClock = TRUE;
+	pScrn->rgbBits = 8;
+	pScrn->chipset = "fbdev";
+	pScrn->videoRam = fbdevHWGetVidmem(pScrn);
 
 	INFO_MSG( "Handle options" );
 	xf86CollectOptions(pScrn,NULL);
-	if(!(pRPI->Options = calloc(1, sizeof(RPIOptions))))
+	if(!(pRPI->Options = malloc(sizeof(RPIOptions))))
 	{
 		goto fail;
 	}
@@ -206,23 +214,38 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 
 
 	INFO_MSG( "Setting the video modes" );
-	fbdevHWUseBuildinMode(pScrn);
+	fbdevHWSetVideoModes(pScrn);
+	{
+		DisplayModePtr mode, first = mode = pScrn->modes;
+		if( mode != NULL ) do {
+			mode->status = xf86CheckModeForMonitor(mode, pScrn->monitor);
+			mode = mode->next;
+		} while( mode != NULL && mode != first );
 
-	INFO_MSG( "dismodes = %p", pScrn->display->modes );
-	INFO_MSG( "Mode = %p", pScrn->modes );	
-	INFO_MSG( "Mon = %p", pScrn->monitor );
-	char* name = fbdevHWGetName(pScrn);
-	INFO_MSG( "scrn name = %s", name );
+		xf86PruneDriverModes(pScrn);
+	}
+
+	if( pScrn->modes == NULL )
+	{
+		fbdevHWUseBuildinMode(pScrn);
+	}
+	pScrn->currentMode = pScrn->modes;
+
+	pScrn->displayWidth = pScrn->virtualX;
+
+	xf86PrintModes(pScrn);
+	
 	xf86SetDpi(pScrn,0,0);
 
 	switch(pScrn->bitsPerPixel)
 	{
+	case 8:
 	case 16:
 	case 24:
 	case 32:
 		break;
 	default:
-		ERROR_MSG( "The requested depth (%d) is unsupported", pScrn->bitsPerPixel);
+		ERROR_MSG( "The requested depth (%d) is unsupported", pScrn );
 		goto fail;
 	}
 
@@ -245,7 +268,67 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+	RPIPtr pRPI = RPIPTR(pScrn);
+	VisualPtr visual;
+	int init_picture = 0;
+	int ret, flags;
+	int type;
+
 	INFO_MSG("RPIScreenInit");
+
+	INFO_MSG("\tbitsPerPixel=%d, depth=%d, defaultVisual=%s\n"
+	       "\tmask: %x,%x,%x, offset: %d,%d,%d\n",
+	       pScrn->bitsPerPixel,
+	       pScrn->depth,
+	       xf86GetVisualName(pScrn->defaultVisual),
+	       pScrn->mask.red,pScrn->mask.green,pScrn->mask.blue,
+	       pScrn->offset.red,pScrn->offset.green,pScrn->offset.blue);
+	
+	if( (pRPI->fbmem = fbdevHWMapVidmem(pScrn)) == NULL)
+	{
+		return FALSE;
+	}
+
+	RPISave(pScrn);
+	if( !RPIModeInit(pScrn, pScrn->currentMode ) )
+	{
+		return FALSE;
+	}
+	RPIAdjustFrame(scrnNum, pScrn->frameX0, pScrn->frameY0, 0 );
+	
+	miClearVisualTypes();
+	if( !miSetVisualTypes( pScrn->depth, TrueColorMask, pScrn->rgbBits, TrueColor ) )
+	{
+		return FALSE;
+	}
+
+	if( !miSetPixmapDepths() )
+	{
+		return FALSE;
+	}
+	INFO_MSG( "Visual types set" );
+
+	if( !fbScreenInit(pScreen, pRPI->fbstart, pScrn->virtualX, pScrn->virtualY, pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth, pScrn->bitsPerPixel ) )
+	{
+		return FALSE;
+	}
+
+	if (pScrn->bitsPerPixel > 8) {
+		/* Fixup RGB ordering */
+		visual = pScreen->visuals + pScreen->numVisuals;
+		while (--visual >= pScreen->visuals) {
+			if ((visual->class | DynamicClass) == DirectColor) {
+				visual->offsetRed   = pScrn->offset.red;
+				visual->offsetGreen = pScrn->offset.green;
+				visual->offsetBlue  = pScrn->offset.blue;
+				visual->redMask     = pScrn->mask.red;
+				visual->greenMask   = pScrn->mask.green;
+				visual->blueMask    = pScrn->mask.blue;
+			}
+		}
+	}
+
+	INFO_MSG( "ScreenInit finished" );
 	return TRUE;
 }
 
@@ -275,3 +358,4 @@ static void RPIFreeScreen(int scrnNum, int flags)
 {
 	xf86Msg( X_INFO, "RPIFreeScreen" );
 }
+
