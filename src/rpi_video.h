@@ -1,6 +1,9 @@
 #ifndef __RPI_VIDEO_H__
 #define __RPI_VIDEO_H__
 
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+
 #define VERSION 0
 #define RPI_NAME "RPI"         /* the name used to prefix messages */
 #define RPI_DRIVER_NAME "rpi"  /* the driver name as used in config file */
@@ -38,7 +41,10 @@ typedef struct {
 	EntityInfoPtr EntityInfo;
 	CloseScreenProcPtr CloseScreen;
 	OptionInfoPtr Options;
-} RPIRec, *RPIPtr;
+   	EGLDisplay display;
+   	EGLSurface surface;
+   	EGLContext context;
+} RPIRec, *RPIPtr, *FBDevPtr;
 
 static void RPIIdentify(int);
 static Bool RPIProbe(DriverPtr,int);
@@ -54,4 +60,5 @@ static void RPILeaveVT(int, int);
 static void RPIFreeScreen(int, int);
 
 #define RPIPTR(p) ((RPIPtr)((p)->driverPrivate))
+#define FBDEVPTR(p) ((RPIPtr)((p)->driverPrivate))
 #endif

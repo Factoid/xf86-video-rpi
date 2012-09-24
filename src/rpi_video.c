@@ -1,8 +1,12 @@
+#include "config.h"
 #include "xorg-server.h"
 #include "xf86.h"
 #include "xf86_OSproc.h"
 #include "micmap.h"
 #include "rpi_video.h"
+//#include "intel_glamor.h"
+
+#define check();
 
 static DriverRec RPI = {
 	VERSION,
@@ -40,6 +44,22 @@ static const OptionInfoRec RPIOptions[] = {
 	{ OPTION_NOACCEL,   "NoAccel",   OPTV_BOOLEAN, {0}, FALSE },
 	{ -1,               NULL,        OPTV_NONE,    {0}, FALSE }
 };
+
+static void printConfig( ScrnInfoPtr scrn, EGLDisplay disp, EGLConfig config )
+{
+   EGLint val;
+   const char* names[] = { "EGL_BUFFER_SIZE", "EGL_RED_SIZE", "EGL_GREEN_SIZE", "EGL_BLUE_SIZE", "EGL_ALPHA_SIZE", "EGL_CONFIG_CAVEAT", "EGL_CONFIG_ID", "EGL_DEPTH_SIZE", "EGL_LEVEL", "EGL_MAX_PBUFFER_WIDTH", "EGL_MAX_PBUFFER_HEIGHT", "EGL_MAX_PBUFFER_PIXELS", "EGL_NATIVE_RENDERABLE", "EGL_NATIVE_VISUAL_ID", "EGL_NATIVE_VISUAL_TYPE", "EGL_SAMPLE_BUFFERS", "EGL_SAMPLES", "EGL_STENCIL_", "EGL_SURFACE_TYPE", "EGL_TRANSPARENT_TYPE", "EGL_TRANSPARENT_RED", "EGL_TRANSPARENT_GREEN", "EGL_TRANSPARENT_BLUE" };
+   const EGLint values[] = { EGL_BUFFER_SIZE, EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE, EGL_ALPHA_SIZE, EGL_CONFIG_CAVEAT, EGL_CONFIG_ID, EGL_DEPTH_SIZE, EGL_LEVEL, EGL_MAX_PBUFFER_WIDTH, EGL_MAX_PBUFFER_HEIGHT, EGL_MAX_PBUFFER_PIXELS, EGL_NATIVE_RENDERABLE, EGL_NATIVE_VISUAL_ID, EGL_NATIVE_VISUAL_TYPE, EGL_SAMPLE_BUFFERS, EGL_SAMPLES, EGL_STENCIL_SIZE, EGL_SURFACE_TYPE, EGL_TRANSPARENT_TYPE, EGL_TRANSPARENT_RED_VALUE, EGL_TRANSPARENT_GREEN_VALUE, EGL_TRANSPARENT_BLUE_VALUE };
+   const int nValues = sizeof(values)/sizeof(EGLint);
+
+   printf( "n values = %i\n", nValues );
+   for(int i = 0; i < nValues; ++i )
+   {
+      eglGetConfigAttrib(disp,config,values[i],&val);
+      xf86DrvMsg(scrn->scrnIndex, X_INFO, "%s = %i\n", names[i], val);
+   }
+}
+    
 
 static void RPIIdentify(int flags)
 {
@@ -135,6 +155,7 @@ static void RPISave( ScrnInfoPtr pScrn )
 
 static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
+#if 0
 	RPIPtr pRPI;
 	int default_depth, fbbpp;
 	rgb defaultWeight = { 0, 0, 0 };
@@ -257,6 +278,71 @@ fail:
 	INFO_MSG( "PriInit fail" );
 	RPIFreeRec(pScrn);
 	return FALSE;
+#else
+	RPIGetRec(pScrn);
+	bcm_host_init();
+	EGLConfig config;
+	EGLBoolean result;
+	EGLint num_config;
+
+	RPIPtr state = RPIPTR(pScrn);
+   static const EGLint attribute_list[] =
+   {
+      EGL_RED_SIZE, 8,
+      EGL_GREEN_SIZE, 8,
+      EGL_BLUE_SIZE, 8,
+      EGL_ALPHA_SIZE, 8,
+      EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+      EGL_NONE
+   };
+   
+   static const EGLint context_attributes[] = 
+   {
+      EGL_CONTEXT_CLIENT_VERSION, 2,
+      EGL_NONE
+   };
+
+   // get an EGL display connection
+   state->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+   assert(state->display!=EGL_NO_DISPLAY);
+   check();
+
+   // initialize the EGL display connection
+   result = eglInitialize(state->display, NULL, NULL);
+   assert(EGL_FALSE != result);
+   check();
+
+   // get an appropriate EGL frame buffer configuration
+   result = eglChooseConfig(state->display, attribute_list, &config, 1, &num_config);
+   assert(EGL_FALSE != result);
+   check();
+   printConfig(pScrn,state->display,config);
+
+   // get an appropriate EGL frame buffer configuration
+//   result = eglBindAPI(EGL_OPENGL_ES_API);
+//   assert(EGL_FALSE != result);
+//   check();
+
+   // create an EGL rendering context
+   state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, context_attributes);
+   if( state->context == EGL_NO_CONTEXT )
+   {
+     ERROR_MSG("No context!");
+     goto fail;
+   } else
+   {
+     INFO_MSG("Context get! %p", state->context);
+   }
+   assert(state->context!=EGL_NO_CONTEXT);
+   check();
+
+//	intel_glamor_pre_init(pScrn);	
+	return TRUE;
+
+fail:
+	RPIFreeRec(pScrn);
+	return FALSE;
+#endif
 }
 
 static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
@@ -267,6 +353,7 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
+#if 0	
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	RPIPtr pRPI = RPIPTR(pScrn);
 	VisualPtr visual;
@@ -330,6 +417,9 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 
 	INFO_MSG( "ScreenInit finished" );
 	return TRUE;
+#else
+	intel_glamor_init(pScreen);
+#endif
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)

@@ -1,3 +1,14 @@
 *.o
 *.so
+*.la
+*.lo
 devnotes.txt
+Makefile
+Makefile.in
+.deps/
+.libs/
+config.*
+configure
+*.m4
+*.cache/
+autoscan.log
