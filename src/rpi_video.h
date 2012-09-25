@@ -4,7 +4,6 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
-#define VERSION 0
 #define RPI_NAME "RPI"         /* the name used to prefix messages */
 #define RPI_DRIVER_NAME "rpi"  /* the driver name as used in config file */
 #define RPI_MODULEVENDORSTRING "Adrian's RPI xf86 driver"

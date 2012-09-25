@@ -37,7 +37,7 @@ static XF86ModuleVersionInfo rpiVersRec =
 	{0,0,0,0}
 };
 
-XF86ModuleData rpiModuleData = { &rpiVersRec, rpiSetup, NULL };
+_X_EXPORT XF86ModuleData rpiModuleData = { &rpiVersRec, rpiSetup, NULL };
 
 static const OptionInfoRec RPIOptions[] = {
 	{ OPTION_HW_CURSOR, "HWcursor",  OPTV_BOOLEAN, {0}, FALSE },
@@ -418,7 +418,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	INFO_MSG( "ScreenInit finished" );
 	return TRUE;
 #else
-	intel_glamor_init(pScreen);
+	return TRUE;
 #endif
 }
 
