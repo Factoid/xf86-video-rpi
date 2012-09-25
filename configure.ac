@@ -22,6 +22,8 @@ PKG_CHECK_MODULES([XORG],[xorg-server])
 PKG_CHECK_MODULES([GL],[egl glesv2 bcm_host])
 
 # Checks for header files.
+drvdir=$libdir/xorg/modules/drivers
+AC_SUBST([drvdir])
 AC_SUBST([moduledir])
 DRIVER_NAME=fbdev
 AC_SUBST([DRIVER_NAME])
