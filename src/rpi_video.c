@@ -5,10 +5,9 @@
 #include "micmap.h"
 #include "rpi_video.h"
 //#include "intel_glamor.h"
+#include "X11/extensions/render.h"
 
-#define check();
-
-static DriverRec RPI = {
+_X_EXPORT DriverRec RPIDriver = {
 	VERSION,
 	RPI_DRIVER_NAME,
 	RPIIdentify,
@@ -74,11 +73,6 @@ static Bool RPIProbe(DriverPtr drv, int flags)
 	int i;
 	Bool foundScreen = FALSE;
 
-	if( !xf86LoadDrvSubModule( drv, "fbdevhw" ) )
-	{
-		return FALSE;
-	}
-
 	if( (numDevSections = xf86MatchDevice(RPI_DRIVER_NAME,&devSections)) <= 0 ) return FALSE;
 
 	for( i = 0; i < numDevSections; ++i )
@@ -122,7 +116,7 @@ static pointer rpiSetup(pointer module, pointer opts, int *errmaj, int *errmin)
 		 */
 
 		setupDone = TRUE;
-		xf86AddDriver(&RPI,module,0);
+		xf86AddDriver(&RPIDriver,module,0);
 		/*
 		 * The return value must be non-NULL on success even though
 		 * there is no TearDownProc.
@@ -155,130 +149,8 @@ static void RPISave( ScrnInfoPtr pScrn )
 
 static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
-#if 0
-	RPIPtr pRPI;
-	int default_depth, fbbpp;
-	rgb defaultWeight = { 0, 0, 0 };
-	rgb defaultMask = { 0, 0, 0 };
-	Gamma defaultGamma = { 0.0, 0.0, 0.0 };
-	uint64_t value;
-	int i;
+	INFO_MSG("Start PreInit");
 
-	INFO_MSG( "Beginning PreInit" );
-
-	if( pScrn->numEntities != 1 )
-	{
-		ERROR_MSG("Driver expected 1 entity, found %d for screen %d", pScrn->numEntities, pScrn->scrnIndex );
-		return FALSE;
-	}
-
-	if (xf86LoadSubModule(pScrn, "fb") == NULL) {
-		return FALSE;
-	}
-
-	RPIGetRec(pScrn);
-	pRPI = RPIPTR(pScrn);
-
-	pRPI->EntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
-	pScrn->monitor = pScrn->confScreen->monitor;
-
-	INFO_MSG( "calling FBInit" );	
-	if( !fbdevHWInit( pScrn, NULL, "/dev/fb0" ) )
-	{
-		goto fail;
-	}
-
-	INFO_MSG( "Init depth" );
-	default_depth = fbdevHWGetDepth(pScrn, &fbbpp);
-	if( !xf86SetDepthBpp(pScrn, default_depth, default_depth, fbbpp, Support32bppFb) )
-	{
-		goto fail;
-	}
-	xf86PrintDepthBpp(pScrn);
-
-	INFO_MSG( "Init weight" );
-	if( !xf86SetWeight(pScrn, defaultWeight, defaultMask ))
-	{
-		goto fail;
-	}
-
-	INFO_MSG( "Init gamma" );
-	if( !xf86SetGamma(pScrn, defaultGamma))
-	{
-		goto fail;
-	}
-
-	INFO_MSG( "Init visual" );
-	if( !xf86SetDefaultVisual(pScrn, -1))
-	{
-		goto fail;
-	}
-
-	if( pScrn->depth < 16 )
-	{
-		ERROR_MSG("The requested default visual (%s) has an unsupported depth (%d).", xf86GetVisualName(pScrn->defaultVisual), pScrn->depth);
-		goto fail; 
-	}
-	pScrn->progClock = TRUE;
-	pScrn->rgbBits = 8;
-	pScrn->chipset = "fbdev";
-	pScrn->videoRam = fbdevHWGetVidmem(pScrn);
-
-	INFO_MSG( "Handle options" );
-	xf86CollectOptions(pScrn,NULL);
-	if(!(pRPI->Options = malloc(sizeof(RPIOptions))))
-	{
-		goto fail;
-	}
-	memcpy(pRPI->Options, RPIOptions, sizeof(RPIOptions));
-	xf86ProcessOptions(pScrn->scrnIndex, pRPI->EntityInfo->device->options, pRPI->Options);
-
-
-	INFO_MSG( "Setting the video modes" );
-	fbdevHWSetVideoModes(pScrn);
-	{
-		DisplayModePtr mode, first = mode = pScrn->modes;
-		if( mode != NULL ) do {
-			mode->status = xf86CheckModeForMonitor(mode, pScrn->monitor);
-			mode = mode->next;
-		} while( mode != NULL && mode != first );
-
-		xf86PruneDriverModes(pScrn);
-	}
-
-	if( pScrn->modes == NULL )
-	{
-		fbdevHWUseBuildinMode(pScrn);
-	}
-	pScrn->currentMode = pScrn->modes;
-
-	pScrn->displayWidth = pScrn->virtualX;
-
-	xf86PrintModes(pScrn);
-	
-	xf86SetDpi(pScrn,0,0);
-
-	switch(pScrn->bitsPerPixel)
-	{
-	case 8:
-	case 16:
-	case 24:
-	case 32:
-		break;
-	default:
-		ERROR_MSG( "The requested depth (%d) is unsupported", pScrn );
-		goto fail;
-	}
-
-	INFO_MSG( "PreInit success" );
-	
-	return TRUE;
-
-fail:
-	INFO_MSG( "PriInit fail" );
-	RPIFreeRec(pScrn);
-	return FALSE;
-#else
 	RPIGetRec(pScrn);
 	bcm_host_init();
 	EGLConfig config;
@@ -286,63 +158,65 @@ fail:
 	EGLint num_config;
 
 	RPIPtr state = RPIPTR(pScrn);
-   static const EGLint attribute_list[] =
-   {
-      EGL_RED_SIZE, 8,
-      EGL_GREEN_SIZE, 8,
-      EGL_BLUE_SIZE, 8,
-      EGL_ALPHA_SIZE, 8,
-      EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-      EGL_NONE
-   };
-   
-   static const EGLint context_attributes[] = 
-   {
-      EGL_CONTEXT_CLIENT_VERSION, 2,
-      EGL_NONE
-   };
+	static const EGLint attribute_list[] =
+	{
+		EGL_RED_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_BLUE_SIZE, 8,
+		EGL_ALPHA_SIZE, 8,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_NONE
+	};
 
-   // get an EGL display connection
-   state->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-   assert(state->display!=EGL_NO_DISPLAY);
-   check();
+	static const EGLint context_attributes[] = 
+	{
+		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_NONE
+	};
 
-   // initialize the EGL display connection
-   result = eglInitialize(state->display, NULL, NULL);
-   assert(EGL_FALSE != result);
-   check();
+	// get an EGL display connection
+	state->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	assert(state->display!=EGL_NO_DISPLAY);
 
-   // get an appropriate EGL frame buffer configuration
-   result = eglChooseConfig(state->display, attribute_list, &config, 1, &num_config);
-   assert(EGL_FALSE != result);
-   check();
-   printConfig(pScrn,state->display,config);
+	// initialize the EGL display connection
+	result = eglInitialize(state->display, NULL, NULL);
+	assert(EGL_FALSE != result);
 
-   // get an appropriate EGL frame buffer configuration
-//   result = eglBindAPI(EGL_OPENGL_ES_API);
-//   assert(EGL_FALSE != result);
-//   check();
+	// get an appropriate EGL frame buffer configuration
+	result = eglChooseConfig(state->display, attribute_list, &config, 1, &num_config);
+	assert(EGL_FALSE != result);
+	printConfig(pScrn,state->display,config);
 
-   // create an EGL rendering context
-   state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, context_attributes);
-   if( state->context == EGL_NO_CONTEXT )
-   {
-     ERROR_MSG("No context!");
-     goto fail;
-   } else
-   {
-     INFO_MSG("Context get! %p", state->context);
-   }
-   assert(state->context!=EGL_NO_CONTEXT);
-   check();
+	// get an appropriate EGL frame buffer configuration
+	//   result = eglBindAPI(EGL_OPENGL_ES_API);
+	//   assert(EGL_FALSE != result);
+	//   check();
 
-//	intel_glamor_pre_init(pScrn);	
+	// create an EGL rendering context
+	state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, context_attributes);
+	if( state->context == EGL_NO_CONTEXT )
+	{
+		ERROR_MSG("No context!");
+		goto fail;
+	} else
+	{
+		INFO_MSG("Context get! %p", state->context);
+	}
+	assert(state->context!=EGL_NO_CONTEXT);
+
+	eglGetConfigAttrib(state->display,config,EGL_BUFFER_SIZE,&pScrn->bitsPerPixel);
+	pScrn->currentMode = calloc(1,sizeof(DisplayModeRec));
+	pScrn->zoomLocked = TRUE;
+	graphics_get_display_size(0, &pScrn->currentMode->HDisplay, &pScrn->currentMode->VDisplay );	
+	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
+	//	intel_glamor_pre_init(pScrn);	
+	INFO_MSG("PreInit Success");
 	return TRUE;
 
 fail:
+	INFO_MSG("PreInit Failed");
 	RPIFreeRec(pScrn);
 	return FALSE;
-#endif
 }
 
 static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
@@ -353,73 +227,19 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
-#if 0	
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-	RPIPtr pRPI = RPIPTR(pScrn);
-	VisualPtr visual;
-	int init_picture = 0;
-	int ret, flags;
-	int type;
-
-	INFO_MSG("RPIScreenInit");
-
-	INFO_MSG("\tbitsPerPixel=%d, depth=%d, defaultVisual=%s\n"
-	       "\tmask: %x,%x,%x, offset: %d,%d,%d\n",
-	       pScrn->bitsPerPixel,
-	       pScrn->depth,
-	       xf86GetVisualName(pScrn->defaultVisual),
-	       pScrn->mask.red,pScrn->mask.green,pScrn->mask.blue,
-	       pScrn->offset.red,pScrn->offset.green,pScrn->offset.blue);
-	
-	if( (pRPI->fbmem = fbdevHWMapVidmem(pScrn)) == NULL)
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	INFO_MSG("ScreenInit");
+	if( PictureInit( pScreen, NULL, 0 ) )
 	{
-		return FALSE;
+		goto fail;
 	}
+	PictureSetSubpixelOrder(pScreen,SubPixelHorizontalRGB);
 
-	RPISave(pScrn);
-	if( !RPIModeInit(pScrn, pScrn->currentMode ) )
-	{
-		return FALSE;
-	}
-	RPIAdjustFrame(scrnNum, pScrn->frameX0, pScrn->frameY0, 0 );
-	
-	miClearVisualTypes();
-	if( !miSetVisualTypes( pScrn->depth, TrueColorMask, pScrn->rgbBits, TrueColor ) )
-	{
-		return FALSE;
-	}
-
-	if( !miSetPixmapDepths() )
-	{
-		return FALSE;
-	}
-	INFO_MSG( "Visual types set" );
-
-	if( !fbScreenInit(pScreen, pRPI->fbstart, pScrn->virtualX, pScrn->virtualY, pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth, pScrn->bitsPerPixel ) )
-	{
-		return FALSE;
-	}
-
-	if (pScrn->bitsPerPixel > 8) {
-		/* Fixup RGB ordering */
-		visual = pScreen->visuals + pScreen->numVisuals;
-		while (--visual >= pScreen->visuals) {
-			if ((visual->class | DynamicClass) == DirectColor) {
-				visual->offsetRed   = pScrn->offset.red;
-				visual->offsetGreen = pScrn->offset.green;
-				visual->offsetBlue  = pScrn->offset.blue;
-				visual->redMask     = pScrn->mask.red;
-				visual->greenMask   = pScrn->mask.green;
-				visual->blueMask    = pScrn->mask.blue;
-			}
-		}
-	}
-
-	INFO_MSG( "ScreenInit finished" );
+	INFO_MSG("ScreenInit Success!");
 	return TRUE;
-#else
-	return TRUE;
-#endif
+fail:
+	ERROR_MSG("ScreeInit Failed!");
+	return FALSE;
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)

@@ -25,6 +25,7 @@ PKG_CHECK_MODULES([GL],[egl glesv2 bcm_host])
 drvdir=$libdir/xorg/modules/drivers
 AC_SUBST([drvdir])
 AC_SUBST([moduledir])
+CFLAGS=-g
 DRIVER_NAME=fbdev
 AC_SUBST([DRIVER_NAME])
 AC_CONFIG_FILES([Makefile
