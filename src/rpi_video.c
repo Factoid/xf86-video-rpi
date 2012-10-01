@@ -1,11 +1,11 @@
 #include "config.h"
-#include "xorg-server.h"
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "micmap.h"
+#include <xorg-server.h>
+#include <xf86.h>
+#include <xf86_OSproc.h>
+#include <micmap.h>
+#include <gcstruct.h>
+#include <X11/extensions/render.h>
 #include "rpi_video.h"
-//#include "intel_glamor.h"
-#include "X11/extensions/render.h"
 
 _X_EXPORT DriverRec RPIDriver = {
 	VERSION,
@@ -58,7 +58,6 @@ static void printConfig( ScrnInfoPtr scrn, EGLDisplay disp, EGLConfig config )
       xf86DrvMsg(scrn->scrnIndex, X_INFO, "%s = %i\n", names[i], val);
    }
 }
-    
 
 static void RPIIdentify(int flags)
 {
@@ -225,15 +224,158 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 	return TRUE;
 }
 
+static Bool RPICreateScreenResources( ScreenPtr pScreen )
+{	
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	INFO_MSG("RPICreateScreenResources");
+	return TRUE;
+}
+
+void RPIPolyFillRect( DrawablePtr pDraw, GCPtr pGC, int nRects, xRectangle* rects)
+{
+}
+
+void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char* chars )
+{
+}
+
+static GCOps RPIGCOps = {
+0,//	RPIFillSpans,
+0,//	RPISetSpans,
+0,//	RPIPutImage,
+0,//	RPICopyArea,
+0,//	RPICopyPlane,
+0,//	RPIPolyPoint,
+0,//	RPIPolyLines,
+0,//	RPIPolySegment,
+0,//	RPIPolyRectangle,
+0,//	RPIPolyArc,
+0,//	RPIFillPolygon,
+	RPIPolyFillRect,
+0,//	RPIPolyFillArc,
+0,//	RPIPolyText8,
+	RPIPolyText16,
+0,//	RPIImageText8,
+0,//	RPIImageText16,
+0,//	RPIImagGlyptBlt,
+0,//	RPIPolyGlyphBlt,
+0,//	RPIPushPixels
+};
+
+void RPIChangeGC(GCPtr pGC, unsigned long mask)
+{
+}
+
+void RPIValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr pDraw )
+{
+
+}
+/*
+void RPICopyGC()
+{
+}
+*/
+void RPIDestroyGC( GCPtr pGC )
+{
+}
+/*
+void RPIChangeClip()
+{
+}
+*/
+void RPIDestroyClip( GCPtr pGC )
+{
+}
+/*
+void RPICopyClip()
+{
+}
+*/
+static GCFuncs RPIGCFuncs = {
+	RPIValidateGC,
+	RPIChangeGC,
+0,//	RPICopyGC,
+	RPIDestroyGC,
+0,//	RPIChangeClip,
+	RPIDestroyClip,
+0//	RPICopyClip
+};
+	
+static Bool RPICreateGC( GCPtr pGC )
+{
+	pGC->ops = &RPIGCOps;
+	pGC->funcs = &RPIGCFuncs;
+	ScreenPtr pScreen = pGC->pScreen;	
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	INFO_MSG("RPICreateGC");
+	return TRUE;
+}
+
+void RPIQueryBestSize( int class, unsigned short* w, unsigned short* h, ScreenPtr pScreen )
+{
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	INFO_MSG("RPIQueryBestSize");
+}
+
+PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
+{
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	INFO_MSG("RPICreatePixmap");
+	return AllocatePixmap(pScreen,0);
+}
+ 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
 	INFO_MSG("ScreenInit");
-	if( PictureInit( pScreen, NULL, 0 ) )
+
+	INFO_MSG("Installing handlers");
+	pScreen->CreateScreenResources = RPICreateScreenResources;
+	pScreen->CreateGC = RPICreateGC;
+	pScreen->QueryBestSize = RPIQueryBestSize;
+	pScreen->CreatePixmap = RPICreatePixmap;
+/*
+	pScreen->ChangeWindowAttributes = RPIChangeWindowAttributes;
+	pScreen->ClipNotify = RPIClipNotify;
+	pScreen->ConstrainCursor = RPIConstrainCursor;
+	pScreen->CreateWindow = RPICreateWindow;
+	pScreen->CursorLimits = RPICursorLimits;
+	pScreen->DestroyPixmap = RPIDestroyPixmap;
+	pScreen->DestroyWindow = RPIDestroyWindow;
+	pScreen->DisplayCursor = RPIDisplayCursor;
+	pScreen->GetSpans = RPIGetSpans;
+	pScreen->GetStaticColormap = RPIGetStaticColormap;
+	pScreen->InstallColormap = RPIInstallColormap;
+	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
+	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
+	pScreen->PositionWindow = RPIPositionWindow;
+	pScreen->RealizeCursor = RPIRealizeCursor;
+	pScreen->RealizeFont = RPIRealizeFont;
+	pScreen->RealizeWindow = RPIRealizeWindow;
+	pScreen->RecolorCursor = RPIRecolorCursor;
+	pScreen->ResolveColor = RPIResolveColor;
+	pScreen->SaveScreen = RPISaveScreen;
+	pScreen->SetCursorPosition = RPISetCursorPosition;
+	pScreen->StoreColors = RPIStoreColors;
+	pScreen->UninstallColormap = RPIUninstallColormape;
+	pScreen->UnrealizeCursor = RPIUnrealizeCursor;
+	pScreen->UnrealizeFont = RPIUnrealizeFont;
+	pScreen->UnrealizeWindow = RPIUnrealizeWindow;
+*/	
+
+	INFO_MSG("PictureInit");
+	if( !PictureInit( pScreen, NULL, 0 ) )
 	{
+		ERROR_MSG("PictureInit failed");
 		goto fail;
 	}
 	PictureSetSubpixelOrder(pScreen,SubPixelHorizontalRGB);
+
+	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&pScreen->numVisuals,&pScreen->numDepths,&pScreen->rootDepth,&pScreen->rootVisual,-1,8,0) )
+	{
+		ERROR_MSG("InitVisuals failed" );
+		goto fail;
+	}
 
 	INFO_MSG("ScreenInit Success!");
 	return TRUE;
