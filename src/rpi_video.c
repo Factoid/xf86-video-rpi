@@ -6,6 +6,8 @@
 #include <gcstruct.h>
 #include <X11/extensions/render.h>
 #include "rpi_video.h"
+#include <migc.h>
+#include <mi.h>
 
 _X_EXPORT DriverRec RPIDriver = {
 	VERSION,
@@ -71,6 +73,9 @@ static Bool RPIProbe(DriverPtr drv, int flags)
 	int *usedChips;
 	int i;
 	Bool foundScreen = FALSE;
+
+	if (!xf86LoadDrvSubModule(drv, "fb"))
+		return FALSE;
 
 	if( (numDevSections = xf86MatchDevice(RPI_DRIVER_NAME,&devSections)) <= 0 ) return FALSE;
 
@@ -242,24 +247,24 @@ void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char*
 static GCOps RPIGCOps = {
 0,//	RPIFillSpans,
 0,//	RPISetSpans,
-0,//	RPIPutImage,
-0,//	RPICopyArea,
-0,//	RPICopyPlane,
-0,//	RPIPolyPoint,
+miPutImage,//	RPIPutImage,
+miCopyArea,//	RPICopyArea,
+miCopyPlane,//	RPICopyPlane,
+miPolyPoint,//	RPIPolyPoint,
 0,//	RPIPolyLines,
-0,//	RPIPolySegment,
-0,//	RPIPolyRectangle,
-0,//	RPIPolyArc,
-0,//	RPIFillPolygon,
+miPolySegment,//	RPIPolySegment,
+miPolyRectangle,//	RPIPolyRectangle,
+miPolyArc,//	RPIPolyArc,
+miFillPolygon,//	RPIFillPolygon,
 	RPIPolyFillRect,
-0,//	RPIPolyFillArc,
-0,//	RPIPolyText8,
+miPolyFillArc,//	RPIPolyFillArc,
+miPolyText8,//	RPIPolyText8,
 	RPIPolyText16,
-0,//	RPIImageText8,
-0,//	RPIImageText16,
-0,//	RPIImagGlyptBlt,
-0,//	RPIPolyGlyphBlt,
-0,//	RPIPushPixels
+miImageText8,//	RPIImageText8,
+miImageText16,//	RPIImageText16,
+miImageGlyphBlt,//	RPIImagGlyptBlt,
+miPolyGlyphBlt,//	RPIPolyGlyphBlt,
+miPushPixels,//	RPIPushPixels
 };
 
 void RPIChangeGC(GCPtr pGC, unsigned long mask)
@@ -294,11 +299,11 @@ void RPICopyClip()
 static GCFuncs RPIGCFuncs = {
 	RPIValidateGC,
 	RPIChangeGC,
-0,//	RPICopyGC,
+miCopyGC,//	RPICopyGC,
 	RPIDestroyGC,
-0,//	RPIChangeClip,
+miChangeClip,//	RPIChangeClip,
 	RPIDestroyClip,
-0//	RPICopyClip
+miCopyClip//	RPICopyClip
 };
 	
 static Bool RPICreateGC( GCPtr pGC )
@@ -321,9 +326,55 @@ PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
 	INFO_MSG("RPICreatePixmap");
-	return AllocatePixmap(pScreen,0);
+/*
+	PixmapPtr p = AllocatePixmap(pScreen,0);
+	p->drawable.x = 0;
+	p->drawable.y = 0;
+	p->drawable.width = w;
+	p->drawable.height = h;
+	p->drawable.depth = d;
+	p->drawable.type = DRAWABLE_PIXMAP;
+	p->drawable.class = 0;
+	p->drawable.bitsPerPixel = 32;
+	p->drawable.id = 0;
+	p->refcnt = 1;
+	p->devKind = w * 4;
+	p->usage_hint = hint;
+	p->drawable.serialNumber = NEXT_SERIAL_NUMBER;	
+	p->drawable.pScreen = pScreen;
+#ifdef COMPOSITE
+	p->screen_x = 0;
+	p->screen_y = 0;
+#endif
+	p->devPrivates = 0;
+	memset(&p->devPrivates,0,sizeof(DevUnion));
+	return p;
+*/
+	return fbCreatePixmapBpp( pScreen, w, h, d, 32, hint );
 }
  
+void RPIGetImage( DrawablePtr pDraw, int sx, int sy, int w, int h, unsigned int format, unsigned long planemask, char* pdstLine )
+{
+}
+
+void RPIDestroyPixmap( PixmapPtr p )
+{
+}
+
+Bool RPICreateWindow( WindowPtr pWin )
+{
+	return FALSE;
+}
+
+void RPIPositionWindow( WindowPtr pWin, int x, int y )
+{
+}
+
+Bool RPIDeviceCursorInitialize( DeviceIntPtr pDev, ScreenPtr pScreen )
+{
+	return FALSE;
+}
+
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
@@ -334,13 +385,16 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->CreateGC = RPICreateGC;
 	pScreen->QueryBestSize = RPIQueryBestSize;
 	pScreen->CreatePixmap = RPICreatePixmap;
+	pScreen->GetImage = RPIGetImage;
+	pScreen->DestroyPixmap = RPIDestroyPixmap;
+	pScreen->CreateWindow = RPICreateWindow;
+	pScreen->PositionWindow = RPIPositionWindow;
+	pScreen->DeviceCursorInitialize = RPIDeviceCursorInitialize;
 /*
 	pScreen->ChangeWindowAttributes = RPIChangeWindowAttributes;
 	pScreen->ClipNotify = RPIClipNotify;
 	pScreen->ConstrainCursor = RPIConstrainCursor;
-	pScreen->CreateWindow = RPICreateWindow;
 	pScreen->CursorLimits = RPICursorLimits;
-	pScreen->DestroyPixmap = RPIDestroyPixmap;
 	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->DisplayCursor = RPIDisplayCursor;
 	pScreen->GetSpans = RPIGetSpans;
@@ -348,7 +402,6 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
 	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
-	pScreen->PositionWindow = RPIPositionWindow;
 	pScreen->RealizeCursor = RPIRealizeCursor;
 	pScreen->RealizeFont = RPIRealizeFont;
 	pScreen->RealizeWindow = RPIRealizeWindow;
