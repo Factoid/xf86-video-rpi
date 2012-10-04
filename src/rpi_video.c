@@ -363,16 +363,56 @@ void RPIDestroyPixmap( PixmapPtr p )
 
 Bool RPICreateWindow( WindowPtr pWin )
 {
-	return FALSE;
+	return TRUE;
 }
 
 void RPIPositionWindow( WindowPtr pWin, int x, int y )
 {
 }
 
+void RPIChangeWindowAttributes( WindowPtr pWin, unsigned long mask )
+{
+}
+
 Bool RPIDeviceCursorInitialize( DeviceIntPtr pDev, ScreenPtr pScreen )
 {
-	return FALSE;
+	return TRUE;
+}
+
+void RPIRealizeWindow( WindowPtr pWin )
+{
+}
+
+void RPIWindowExposures( WindowPtr pWin, RegionPtr region, RegionPtr others )
+{
+}
+
+void RPIRealizeCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
+{
+}
+
+void RPICursorLimits( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor, BoxPtr pHotbox, BoxPtr pTopLeft )
+{
+}
+
+void RPIConstrainCursor( DeviceIntPtr pDev, ScreenPtr pScreen, BoxPtr pBox )
+{
+}
+
+void RPISetCursorPosition( DeviceIntPtr pDev, ScreenPtr pScreen, int x, int y, Bool genEvent )
+{
+}
+
+void RPIDisplayCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
+{
+}
+
+void RPISaveScreen( ScreenPtr pScreen, int on )
+{
+}
+
+void RPIBlockHandler( int sNum, pointer bData, pointer pTimeout, pointer pReadmask )
+{
 }
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
@@ -390,25 +430,27 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->CreateWindow = RPICreateWindow;
 	pScreen->PositionWindow = RPIPositionWindow;
 	pScreen->DeviceCursorInitialize = RPIDeviceCursorInitialize;
-/*
 	pScreen->ChangeWindowAttributes = RPIChangeWindowAttributes;
-	pScreen->ClipNotify = RPIClipNotify;
-	pScreen->ConstrainCursor = RPIConstrainCursor;
+	pScreen->RealizeWindow = RPIRealizeWindow;
+	pScreen->WindowExposures = RPIWindowExposures;
+	pScreen->RealizeCursor = RPIRealizeCursor;
 	pScreen->CursorLimits = RPICursorLimits;
-	pScreen->DestroyWindow = RPIDestroyWindow;
+	pScreen->ConstrainCursor = RPIConstrainCursor;
+	pScreen->SetCursorPosition = RPISetCursorPosition;
 	pScreen->DisplayCursor = RPIDisplayCursor;
+	pScreen->SaveScreen = RPISaveScreen;
+	pScreen->BlockHandler = RPIBlockHandler;
+/*
+	pScreen->ClipNotify = RPIClipNotify;
+	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->GetSpans = RPIGetSpans;
 	pScreen->GetStaticColormap = RPIGetStaticColormap;
 	pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
 	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
-	pScreen->RealizeCursor = RPIRealizeCursor;
 	pScreen->RealizeFont = RPIRealizeFont;
-	pScreen->RealizeWindow = RPIRealizeWindow;
 	pScreen->RecolorCursor = RPIRecolorCursor;
 	pScreen->ResolveColor = RPIResolveColor;
-	pScreen->SaveScreen = RPISaveScreen;
-	pScreen->SetCursorPosition = RPISetCursorPosition;
 	pScreen->StoreColors = RPIStoreColors;
 	pScreen->UninstallColormap = RPIUninstallColormape;
 	pScreen->UnrealizeCursor = RPIUnrealizeCursor;
