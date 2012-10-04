@@ -53,11 +53,11 @@ static void printConfig( ScrnInfoPtr scrn, EGLDisplay disp, EGLConfig config )
    const EGLint values[] = { EGL_BUFFER_SIZE, EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE, EGL_ALPHA_SIZE, EGL_CONFIG_CAVEAT, EGL_CONFIG_ID, EGL_DEPTH_SIZE, EGL_LEVEL, EGL_MAX_PBUFFER_WIDTH, EGL_MAX_PBUFFER_HEIGHT, EGL_MAX_PBUFFER_PIXELS, EGL_NATIVE_RENDERABLE, EGL_NATIVE_VISUAL_ID, EGL_NATIVE_VISUAL_TYPE, EGL_SAMPLE_BUFFERS, EGL_SAMPLES, EGL_STENCIL_SIZE, EGL_SURFACE_TYPE, EGL_TRANSPARENT_TYPE, EGL_TRANSPARENT_RED_VALUE, EGL_TRANSPARENT_GREEN_VALUE, EGL_TRANSPARENT_BLUE_VALUE };
    const int nValues = sizeof(values)/sizeof(EGLint);
 
-   printf( "n values = %i\n", nValues );
+   ErrorF( "n values = %i\n", nValues );
    for(int i = 0; i < nValues; ++i )
    {
       eglGetConfigAttrib(disp,config,values[i],&val);
-      xf86DrvMsg(scrn->scrnIndex, X_INFO, "%s = %i\n", names[i], val);
+      ErrorF("%s = %i\n", names[i], val);
    }
 }
 
@@ -149,13 +149,15 @@ static void RPIFreeRec(ScrnInfoPtr pScrn)
 
 static void RPISave( ScrnInfoPtr pScrn )
 {
+	ErrorF("RPISave\n");
 }
 
 static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
-	INFO_MSG("Start PreInit");
+	ErrorF("Start PreInit\n");
 
 	RPIGetRec(pScrn);
+/*	
 	bcm_host_init();
 	EGLConfig config;
 	EGLBoolean result;
@@ -214,34 +216,41 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	graphics_get_display_size(0, &pScrn->currentMode->HDisplay, &pScrn->currentMode->VDisplay );	
 	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
 	//	intel_glamor_pre_init(pScrn);	
-	INFO_MSG("PreInit Success");
+*/
+	pScrn->currentMode = calloc(1,sizeof(DisplayModeRec));
+	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
+	pScrn->currentMode->HDisplay=640;
+	pScrn->currentMode->VDisplay=480;
+
+	ErrorF("PreInit Success\n");
 	return TRUE;
 
 fail:
-	INFO_MSG("PreInit Failed");
+	ErrorF("PreInit Failed\n");
 	RPIFreeRec(pScrn);
 	return FALSE;
 }
 
 static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 {
-	INFO_MSG("RPIModeInit");
+	ErrorF("RPIModeInit\n");
 	return TRUE;
 }
 
 static Bool RPICreateScreenResources( ScreenPtr pScreen )
 {	
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	INFO_MSG("RPICreateScreenResources");
+	ErrorF("RPICreateScreenResources\n");
 	return TRUE;
 }
 
 void RPIPolyFillRect( DrawablePtr pDraw, GCPtr pGC, int nRects, xRectangle* rects)
 {
+	ErrorF("RPIPolyFillRect\n");
 }
 
 void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char* chars )
 {
+	ErrorF("RPIPolyText16\n");
 }
 
 static GCOps RPIGCOps = {
@@ -269,11 +278,12 @@ miPushPixels,//	RPIPushPixels
 
 void RPIChangeGC(GCPtr pGC, unsigned long mask)
 {
+	ErrorF("RPIChangeGC\n");
 }
 
 void RPIValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr pDraw )
 {
-
+	ErrorF("RPIValidateGC\n");
 }
 /*
 void RPICopyGC()
@@ -282,6 +292,7 @@ void RPICopyGC()
 */
 void RPIDestroyGC( GCPtr pGC )
 {
+	ErrorF("RPIDestroyGC\n");
 }
 /*
 void RPIChangeClip()
@@ -290,6 +301,7 @@ void RPIChangeClip()
 */
 void RPIDestroyClip( GCPtr pGC )
 {
+	ErrorF("RPIDestroyClip\n");
 }
 /*
 void RPICopyClip()
@@ -311,21 +323,19 @@ static Bool RPICreateGC( GCPtr pGC )
 	pGC->ops = &RPIGCOps;
 	pGC->funcs = &RPIGCFuncs;
 	ScreenPtr pScreen = pGC->pScreen;	
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	INFO_MSG("RPICreateGC");
+	ErrorF("RPICreateGC\n");
 	return TRUE;
 }
 
 void RPIQueryBestSize( int class, unsigned short* w, unsigned short* h, ScreenPtr pScreen )
 {
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	INFO_MSG("RPIQueryBestSize");
+	ErrorF("RPIQueryBestSize\n");
 }
 
 PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	INFO_MSG("RPICreatePixmap");
+	ErrorF("RPICreatePixmap\n");
 /*
 	PixmapPtr p = AllocatePixmap(pScreen,0);
 	p->drawable.x = 0;
@@ -355,72 +365,105 @@ PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
  
 void RPIGetImage( DrawablePtr pDraw, int sx, int sy, int w, int h, unsigned int format, unsigned long planemask, char* pdstLine )
 {
+	ErrorF("RPIGetImage\n");
 }
 
 void RPIDestroyPixmap( PixmapPtr p )
 {
+	fbDestroyPixmap(p);
+	ErrorF("RPIDestroyPixmap\n");
 }
 
 Bool RPICreateWindow( WindowPtr pWin )
 {
+	ErrorF("RPICreateWindow\n");
 	return TRUE;
 }
 
 void RPIPositionWindow( WindowPtr pWin, int x, int y )
 {
+	ErrorF("RPIPositionWindow\n");
 }
 
 void RPIChangeWindowAttributes( WindowPtr pWin, unsigned long mask )
 {
+	ErrorF("RPIChangeWindowAttributes\n");
 }
 
 Bool RPIDeviceCursorInitialize( DeviceIntPtr pDev, ScreenPtr pScreen )
 {
+	ErrorF("RPIDeviceCursorInitialize\n");
 	return TRUE;
 }
 
 void RPIRealizeWindow( WindowPtr pWin )
 {
+	ErrorF("RPIRealizeWindow\n");
 }
 
 void RPIWindowExposures( WindowPtr pWin, RegionPtr region, RegionPtr others )
 {
+	ErrorF("RPIWindowExposures\n");
 }
 
 void RPIRealizeCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
 {
+	ErrorF("RPIRealizeCursor\n");
 }
 
 void RPICursorLimits( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor, BoxPtr pHotbox, BoxPtr pTopLeft )
 {
+	ErrorF("RPICursorLimits\n");
 }
 
 void RPIConstrainCursor( DeviceIntPtr pDev, ScreenPtr pScreen, BoxPtr pBox )
 {
+	ErrorF("RPIConstrainCursor\n");
 }
 
 void RPISetCursorPosition( DeviceIntPtr pDev, ScreenPtr pScreen, int x, int y, Bool genEvent )
 {
+	ErrorF("RPISetCursorPosition\n");
 }
 
 void RPIDisplayCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
 {
+	ErrorF("RPIDisplayCursor\n");
 }
 
 void RPISaveScreen( ScreenPtr pScreen, int on )
 {
+	ErrorF("RPISaveScreen\n");
 }
 
 void RPIBlockHandler( int sNum, pointer bData, pointer pTimeout, pointer pReadmask )
 {
+	ErrorF("RPIBlockHandler\n");
+	struct timeval** tvpp = (struct timeval**)pTimeout;
+	(*tvpp)->tv_sec = 5;
+	(*tvpp)->tv_usec = 0;
+}
+
+void RPIWakeupHandler( int sNum, pointer wData, unsigned long result, pointer pReadmask )
+{
+	ErrorF("RPIWakeupHandler\n");
+}
+
+Bool RPICreateColormap( ColormapPtr pmap )
+{
+	ErrorF("RPICreateColormap\n");
+	return TRUE;
+}
+
+void RPIInstallColormap( ColormapPtr pmap )
+{
+	ErrorF("RPIInstallColormap\n");
 }
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	INFO_MSG("ScreenInit");
-
-	INFO_MSG("Installing handlers");
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+	ErrorF("RPIScreenInit\n");
 	pScreen->CreateScreenResources = RPICreateScreenResources;
 	pScreen->CreateGC = RPICreateGC;
 	pScreen->QueryBestSize = RPIQueryBestSize;
@@ -440,12 +483,14 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->DisplayCursor = RPIDisplayCursor;
 	pScreen->SaveScreen = RPISaveScreen;
 	pScreen->BlockHandler = RPIBlockHandler;
+	pScreen->WakeupHandler = RPIWakeupHandler;
+	pScreen->CreateColormap = RPICreateColormap;
+	pScreen->InstallColormap = RPIInstallColormap;
 /*
 	pScreen->ClipNotify = RPIClipNotify;
 	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->GetSpans = RPIGetSpans;
 	pScreen->GetStaticColormap = RPIGetStaticColormap;
-	pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
 	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
 	pScreen->RealizeFont = RPIRealizeFont;
@@ -458,51 +503,68 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->UnrealizeWindow = RPIUnrealizeWindow;
 */	
 
-	INFO_MSG("PictureInit");
+	ErrorF("PictureInit\n");
 	if( !PictureInit( pScreen, NULL, 0 ) )
 	{
-		ERROR_MSG("PictureInit failed");
+		ErrorF("PictureInit failed\n");
 		goto fail;
 	}
 	PictureSetSubpixelOrder(pScreen,SubPixelHorizontalRGB);
 
-	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&pScreen->numVisuals,&pScreen->numDepths,&pScreen->rootDepth,&pScreen->rootVisual,-1,8,0) )
+	miClearVisualTypes();
+	if( !miSetVisualTypes(pScrn->depth,TrueColorMask,pScrn->rgbBits, TrueColor) )
 	{
-		ERROR_MSG("InitVisuals failed" );
+		ErrorF("SetVisualTypes failed\n");
+		goto fail;
+	}
+	if( !miSetPixmapDepths() )
+	{
+		ErrorF("SetPixmapDepths failed\n");
 		goto fail;
 	}
 
-	INFO_MSG("ScreenInit Success!");
+	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&pScreen->numVisuals,&pScreen->numDepths,&pScreen->rootDepth,&pScreen->rootVisual,-1,8,0) )
+	{
+		ErrorF("InitVisuals failed\n" );
+		goto fail;
+	}
+
+	xf86DisableRandR();
+	xf86SetBlackWhitePixels(pScreen);
+	xf86SetBackingStore(pScreen);
+	miCreateDefColormap(pScreen);
+
+	ErrorF("ScreenInit Success\n");
 	return TRUE;
 fail:
-	ERROR_MSG("ScreeInit Failed!");
+	ErrorF("ScreeInit Failed\n");
 	return FALSE;
 }
 
 static Bool RPISwitchMode(int scrnNum, DisplayModePtr pMode, int flags)
 {
-	xf86Msg( X_INFO, "RPISwitchMode" );
+	ErrorF( "RPISwitchMode\n" );
 	return TRUE;
 }
 
 static void RPIAdjustFrame(int scrnNum, int x, int y, int flags)
 {
-	xf86Msg( X_INFO, "RPIAdjustFrame" );
+	ErrorF( "RPIAdjustFrame\n" );
 }
 
 static Bool RPIEnterVT(int scrnNum, int flags)
 {
-	xf86Msg( X_INFO, "RPIEnterVT" );
+	ErrorF("RPIEnterVT\n");
 	return TRUE;
 }
 
 static void RPILeaveVT(int scrnNum, int flags)
 {
-	xf86Msg( X_INFO, "RPILeaveVT" );
+	ErrorF("RPILeaveVT\n" );
 }
 
 static void RPIFreeScreen(int scrnNum, int flags)
 {
-	xf86Msg( X_INFO, "RPIFreeScreen" );
+	ErrorF("RPIFreeScreen\n" );
 }
 
