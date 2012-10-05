@@ -156,8 +156,10 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 {
 	ErrorF("Start PreInit\n");
 
+	pScrn->monitor = pScrn->confScreen->monitor;
+
 	RPIGetRec(pScrn);
-/*	
+	
 	bcm_host_init();
 	EGLConfig config;
 	EGLBoolean result;
@@ -210,17 +212,43 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	}
 	assert(state->context!=EGL_NO_CONTEXT);
 
-	eglGetConfigAttrib(state->display,config,EGL_BUFFER_SIZE,&pScrn->bitsPerPixel);
+	int bpp;
+	eglGetConfigAttrib(state->display,config,EGL_BUFFER_SIZE,&bpp);
+
+	if( !xf86SetDepthBpp(pScrn,0,0,bpp,0) )
+	{
+		goto fail;
+	}
+	
+	rgb c;
+	c.red = 0;
+	c.green = 0;
+	c.blue = 0;
+	if( !xf86SetWeight(pScrn,c,c) )
+	{
+		goto fail;
+	}
+
+	Gamma g;
+	g.red = 0;
+	g.green = 0;
+	g.blue = 0;
+	if( !xf86SetGamma(pScrn,g) )
+	{
+		goto fail;
+	}
+
+	// Should be auto-detecting TrueColor, doesn't...
+	if( !xf86SetDefaultVisual(pScrn, 0) )
+	{
+		goto fail;
+	}
+
 	pScrn->currentMode = calloc(1,sizeof(DisplayModeRec));
 	pScrn->zoomLocked = TRUE;
 	graphics_get_display_size(0, &pScrn->currentMode->HDisplay, &pScrn->currentMode->VDisplay );	
 	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
 	//	intel_glamor_pre_init(pScrn);	
-*/
-	pScrn->currentMode = calloc(1,sizeof(DisplayModeRec));
-	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
-	pScrn->currentMode->HDisplay=640;
-	pScrn->currentMode->VDisplay=480;
 
 	ErrorF("PreInit Success\n");
 	return TRUE;
@@ -460,6 +488,11 @@ void RPIInstallColormap( ColormapPtr pmap )
 	ErrorF("RPIInstallColormap\n");
 }
 
+void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
+{
+	ErrorF("RPIResolveColor");
+}
+
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
@@ -486,6 +519,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->WakeupHandler = RPIWakeupHandler;
 	pScreen->CreateColormap = RPICreateColormap;
 	pScreen->InstallColormap = RPIInstallColormap;
+	pScreen->ResolveColor = RPIResolveColor;
 /*
 	pScreen->ClipNotify = RPIClipNotify;
 	pScreen->DestroyWindow = RPIDestroyWindow;
@@ -495,7 +529,6 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
 	pScreen->RealizeFont = RPIRealizeFont;
 	pScreen->RecolorCursor = RPIRecolorCursor;
-	pScreen->ResolveColor = RPIResolveColor;
 	pScreen->StoreColors = RPIStoreColors;
 	pScreen->UninstallColormap = RPIUninstallColormape;
 	pScreen->UnrealizeCursor = RPIUnrealizeCursor;
