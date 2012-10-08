@@ -1,0 +1,26 @@
+The contents of this folder are bits and pieces not directly related to
+the xf86-video-rpi driver that are either required for building it, or will
+make setting up a development environment easier.
+
+pkg-config/
+	This directory contains .pc files used by the driver's ./configure
+	script to correctly reference the /opt/vc/lib and /opt/vc/include
+	directories. These files should really be included with the video
+	core package, but aren't.
+
+xorg.conf.d/
+	This contains the rpi.conf file for xorg, which contains two server
+	layouts. One that references the rpi driver as "rpiserver", and the
+	default "fbserver", which uses the frame buffer driver. Including 
+	both layouts allows you to quicky switch between drivers for comparison
+	in gdb by calling "set args -layout rpiserver", or 
+	"./Xorg -layout rpiserver" from the command line.
+
+	This file should be placed in /usr/share/X11/xorg.conf.d/
+
+xserver/
+	The setup_build.sh is the flags and command line parameters I've used to
+	create my debug Xorg server. Building it in this manner lets me run
+	xserver/hw/xfree86/Xorg in place of the normal one for debugging. It's
+	important to note that with this build I don't use "make install", just
+	make, and then run the debug server directly from it's build directory.

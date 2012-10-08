@@ -1,0 +1,10 @@
+prefix=/opt/vc
+exec_prefix=${prefix}
+libdir=/opt/vc/lib
+includedir=/opt/vc/include
+
+Name: egl
+Description: RPI EGL Library 
+Version: 8.0.0
+Libs: -L${libdir} -lEGL
+Cflags: -I${includedir} -I${includedir}/interface/vcos/pthreads 

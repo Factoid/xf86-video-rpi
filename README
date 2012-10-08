@@ -6,3 +6,5 @@ processor with their proprietary videocore IV GPU. The Rasberry Pi foundation
 has released an API for low level and OpenGL support. This driver's purpose
 is to provide hardware accelerated 2D and 3D support either natively or through
 Glamor.
+
+Please see the additional README in ./supplemental

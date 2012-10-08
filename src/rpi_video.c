@@ -408,6 +408,10 @@ Bool RPICreateWindow( WindowPtr pWin )
 	return TRUE;
 }
 
+void RPIDestroyWindow( WindowPtr pWin )
+{
+}
+
 void RPIPositionWindow( WindowPtr pWin, int x, int y )
 {
 	ErrorF("RPIPositionWindow\n");
@@ -466,15 +470,15 @@ void RPISaveScreen( ScreenPtr pScreen, int on )
 
 void RPIBlockHandler( int sNum, pointer bData, pointer pTimeout, pointer pReadmask )
 {
-	ErrorF("RPIBlockHandler\n");
+//	ErrorF("RPIBlockHandler\n");
 	struct timeval** tvpp = (struct timeval**)pTimeout;
-	(*tvpp)->tv_sec = 5;
-	(*tvpp)->tv_usec = 0;
+	(*tvpp)->tv_sec = 0;
+	(*tvpp)->tv_usec = 100;
 }
 
 void RPIWakeupHandler( int sNum, pointer wData, unsigned long result, pointer pReadmask )
 {
-	ErrorF("RPIWakeupHandler\n");
+//	ErrorF("RPIWakeupHandler\n");
 }
 
 Bool RPICreateColormap( ColormapPtr pmap )
@@ -490,7 +494,39 @@ void RPIInstallColormap( ColormapPtr pmap )
 
 void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
 {
-	ErrorF("RPIResolveColor");
+	ErrorF("RPIResolveColor\n");
+}
+
+void RPIDestroyColormap( ColormapPtr pmap )
+{
+	ErrorF("RPIDestroyColormap\n");
+}
+
+void RPICloseScreen( int index, ScreenPtr pScreen )
+{
+	ErrorF("RPICloseScreen\n");
+}
+
+PixmapPtr RPIGetScreenPixmap( ScreenPtr pScreen )
+{
+	ErrorF("RPIGetScreenPixmap\n");
+	return 0;
+}
+
+void RPIMarkWindow( WindowPtr pWin )
+{
+	ErrorF("RPIMarkWindow\n");
+}
+
+int RPIValidateTree( WindowPtr pParent, WindowPtr pChild, VTKind vtk )
+{
+	ErrorF("RPIValidateTree\n");
+	return 0;
+}
+
+void RPIHandleExposures( WindowPtr pWin )
+{
+	ErrorF("RPIHandleExposures\n");
 }
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
@@ -520,9 +556,15 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->CreateColormap = RPICreateColormap;
 	pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->ResolveColor = RPIResolveColor;
+	pScreen->DestroyColormap = RPIDestroyColormap;
+	pScreen->DestroyWindow = RPIDestroyWindow;
+	pScreen->CloseScreen = RPICloseScreen;
+	pScreen->GetScreenPixmap = RPIGetScreenPixmap;
+	pScreen->MarkWindow = RPIMarkWindow;
+	pScreen->ValidateTree = RPIValidateTree;
+	pScreen->HandleExposures = RPIHandleExposures;
 /*
 	pScreen->ClipNotify = RPIClipNotify;
-	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->GetSpans = RPIGetSpans;
 	pScreen->GetStaticColormap = RPIGetStaticColormap;
 	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
@@ -559,6 +601,12 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&pScreen->numVisuals,&pScreen->numDepths,&pScreen->rootDepth,&pScreen->rootVisual,-1,8,0) )
 	{
 		ErrorF("InitVisuals failed\n" );
+		goto fail;
+	}
+
+	if( !miDCInitialize(pScreen, xf86GetPointerScreenFuncs() ) )
+	{
+		ErrorF("SpriteInitialize failed\n");
 		goto fail;
 	}
 

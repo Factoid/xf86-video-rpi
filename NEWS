@@ -1,0 +1,5 @@
+Oct 8, 2012:
+	First milestone reached, 'does nothing' Xorg driver. It appears to startup
+	and shut down properly, and allows for the ctrl+alt+backspace and 
+	ctrl+alt+Fn for VT switching. Xorg terminal will be blank, as nothing
+	is yet rendered.

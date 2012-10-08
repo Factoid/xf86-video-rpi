@@ -1,0 +1,10 @@
+prefix=/opt/vc
+exec_prefix=${prefix}
+libdir=/opt/vc/lib
+includedir=/opt/vc/include
+
+Name: bcm_host 
+Description: RPI bcm host
+Version: 1.0.0
+Libs: -L${libdir} -lbcm_host
+Cflags: -I${includedir} 

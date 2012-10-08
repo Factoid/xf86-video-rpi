@@ -1,4 +1,5 @@
 Installation
 ------------
-./build.sh will build and deploy the library to /usr/local/lib/xorg/modules,
-and copy some configuration file in ./config to /usr/share/X11/xorg.conf.d/
+'./configure' to setup, 'make' to build, 'sudo make install' to deploy. Make sure
+the .pc files from supplemental are in your pkg-config search path, and that
+rpi.conf (also from supplemental) is in your X11/xorg.conf.d/ path.
