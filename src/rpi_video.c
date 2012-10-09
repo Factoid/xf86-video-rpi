@@ -598,10 +598,26 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 		goto fail;
 	}
 
-	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&pScreen->numVisuals,&pScreen->numDepths,&pScreen->rootDepth,&pScreen->rootVisual,1<<31,8,-1) )
+	int rootDepth = 0;
+	int numVisuals = 0;
+	int numDepths = 0;
+	VisualID defaultVis;	
+	if( !miInitVisuals(&pScreen->visuals,&pScreen->allowedDepths,&numVisuals,&numDepths,&rootDepth,&defaultVis,1<<31,8,-1) )
 	{
 		ErrorF("InitVisuals failed\n" );
 		goto fail;
+	}
+	pScreen->numVisuals = numVisuals;
+	pScreen->numDepths = numDepths;
+	pScreen->rootDepth = rootDepth;
+	
+	for( int i = 0; i < pScreen->numDepths; ++i )
+	{
+		if( pScreen->allowedDepths[i].depth <= 0 || pScreen->allowedDepths[i].depth > 32 )
+		{
+			ErrorF("Validating depths failed %i, depth %i\n", i, pScreen->allowedDepths[i].depth );
+			goto fail;
+		}
 	}
 
 	if( !miDCInitialize(pScreen, xf86GetPointerScreenFuncs() ) )
