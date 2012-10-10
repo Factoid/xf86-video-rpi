@@ -281,10 +281,15 @@ void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char*
 	ErrorF("RPIPolyText16\n");
 }
 
+void RPIPutImage( DrawablePtr pDraw, GCPtr pGC, int depth, int x, int y, int w, int h, int leftpad, int format, char* pBits )
+{
+	ErrorF("RPIPutImage\n");
+}
+
 static GCOps RPIGCOps = {
-0,//	RPIFillSpans,
-0,//	RPISetSpans,
-miPutImage,//	RPIPutImage,
+0, //RPIFillSpans,
+0, //RPISetSpans,
+RPIPutImage,
 miCopyArea,//	RPICopyArea,
 miCopyPlane,//	RPICopyPlane,
 miPolyPoint,//	RPIPolyPoint,
@@ -529,6 +534,17 @@ void RPIHandleExposures( WindowPtr pWin )
 	ErrorF("RPIHandleExposures\n");
 }
 
+void RPISetWindowPixmap( WindowPtr pWin, PixmapPtr pPix )
+{
+	ErrorF("RPISetWindowPixmap\n");
+}
+
+PixmapPtr RPIGetWindowPixmap( WindowPtr pWin )
+{
+	ErrorF("RPIGetWindowPixmap\n");
+	return 0;
+}
+
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
@@ -563,6 +579,8 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->MarkWindow = RPIMarkWindow;
 	pScreen->ValidateTree = RPIValidateTree;
 	pScreen->HandleExposures = RPIHandleExposures;
+	pScreen->SetWindowPixmap = RPISetWindowPixmap;
+	pScreen->GetWindowPixmap = RPIGetWindowPixmap;
 /*
 	pScreen->ClipNotify = RPIClipNotify;
 	pScreen->GetSpans = RPIGetSpans;
