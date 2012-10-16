@@ -16,3 +16,6 @@ autoscan.log
 install-sh
 depcomp
 missing
+ltmain.sh
+libtool
+stamp-h1
