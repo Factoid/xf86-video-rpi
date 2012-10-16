@@ -13,3 +13,6 @@ configure
 *.m4
 *.cache/
 autoscan.log
+install-sh
+depcomp
+missing
