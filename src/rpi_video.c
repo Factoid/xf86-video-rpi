@@ -271,42 +271,117 @@ static Bool RPICreateScreenResources( ScreenPtr pScreen )
 	return TRUE;
 }
 
+void RPIPutImage( DrawablePtr pDraw, GCPtr pGC, int depth, int x, int y, int w, int h, int leftpad, int format, char* pBits )
+{
+	ErrorF("RPIPutImage\n");
+}
+
+void RPICopyArea( DrawablePtr pSrc, DrawablePtr pDest, GCPtr pGC, int srcx, int srcy, int w, int h, int destx, int desty )
+{
+	ErrorF("RPICopyArea\n");
+}
+
+void RPICopyPlane( DrawablePtr pSrc, DrawablePtr pDest, GCPtr pGC, int srcx, int srcy, int w, int h, int destx, int desty, unsigned long plane )
+{
+	ErrorF("RPICopyPlane\n");
+}
+
+void RPIPolyPoint( DrawablePtr pDraw, GCPtr pGC, int mode, int npt, DDXPointPtr pptInit )
+{
+	ErrorF("RPIPolyPoint\n");
+}
+
+void RPIPolyLines( DrawablePtr pDraw, GCPtr pGC, int mode, int npt, DDXPointPtr pptInit )
+{
+	ErrorF("RPIPolyPoint\n");
+}
+
+void RPIPolySegment( DrawablePtr pDraw, GCPtr pGC, int nSeg, xSegment* pSegs )
+{
+	ErrorF("RPIPolySegment\n");
+}
+
+void RPIPolyRectangle( DrawablePtr pDraw, GCPtr pGC, int nRecs, xRectangle* pRect )
+{
+	ErrorF("RPIPolyRectangle\n");
+}
+
+void RPIPolyArc( DrawablePtr pDraw, GCPtr pGC, int nArcs, xArc* pArcs )
+{
+	ErrorF("RPIPolyArc\n");
+}
+
+void RPIFillPolygon( DrawablePtr pDraw, GCPtr pGC, int shape, int mode, int count, DDXPointPtr pPts )
+{
+	ErrorF("RPIFillPolygon\n");
+}
+
 void RPIPolyFillRect( DrawablePtr pDraw, GCPtr pGC, int nRects, xRectangle* rects)
 {
 	ErrorF("RPIPolyFillRect\n");
 }
 
-void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char* chars )
+void RPIPolyFillArc( DrawablePtr pDraw, GCPtr pGC, int nArcs, xArc* arcs )
+{
+	ErrorF("RPIPolyFillArc\n");
+}
+
+void RPIPolyText8( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char* chars )
+{
+	ErrorF("RPIPolyText8\n");
+}
+
+void RPIPolyText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, unsigned short* chars )
 {
 	ErrorF("RPIPolyText16\n");
 }
 
-void RPIPutImage( DrawablePtr pDraw, GCPtr pGC, int depth, int x, int y, int w, int h, int leftpad, int format, char* pBits )
+void RPIImageText8(DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char * chars )
 {
-	ErrorF("RPIPutImage\n");
+	ErrorF("RPIImageText8\n");
+}
+
+void RPIImageText16( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, unsigned short * chars )
+{
+	ErrorF("RPIImageText16\n");
+}
+
+void RPIImageGlyphBlt( DrawablePtr pDraw, GCPtr pGC, int x, int y, unsigned int nglyph, CharInfoPtr * ppci, pointer pglyphBase )
+{
+	ErrorF("RPIImageGlyphBlt\n");
+}
+
+void RPIPolyGlyphBlt( DrawablePtr pDraw, GCPtr pGC, int x, int y, unsigned int nglyph, CharInfoPtr * ppci, pointer pglyphBase )
+{
+	ErrorF("RPIPolyGlyphBlt\n");
+}
+
+void RPIPushPixels( GCPtr pGC, PixmapPtr pPix, DrawablePtr pDraw, int w, int h, int x, int y )
+{
+	ErrorF("RPIPushPixels\n");
 }
 
 static GCOps RPIGCOps = {
 0, //RPIFillSpans,
 0, //RPISetSpans,
 RPIPutImage,
-miCopyArea,//	RPICopyArea,
-miCopyPlane,//	RPICopyPlane,
-miPolyPoint,//	RPIPolyPoint,
-0,//	RPIPolyLines,
-miPolySegment,//	RPIPolySegment,
-miPolyRectangle,//	RPIPolyRectangle,
-miPolyArc,//	RPIPolyArc,
-miFillPolygon,//	RPIFillPolygon,
-	RPIPolyFillRect,
-miPolyFillArc,//	RPIPolyFillArc,
-miPolyText8,//	RPIPolyText8,
-	RPIPolyText16,
-miImageText8,//	RPIImageText8,
-miImageText16,//	RPIImageText16,
-miImageGlyphBlt,//	RPIImagGlyptBlt,
-miPolyGlyphBlt,//	RPIPolyGlyphBlt,
-miPushPixels,//	RPIPushPixels
+RPICopyArea,
+RPICopyPlane,
+RPIPolyPoint,
+RPIPolyLines,
+RPIPolySegment,
+RPIPolyRectangle,
+RPIPolyArc,
+RPIFillPolygon,
+RPIPolyFillRect,
+RPIPolyFillArc,
+RPIPolyText8,
+RPIPolyText16,
+RPIImageText8,
+RPIImageText16,
+RPIImageGlyphBlt,
+RPIPolyGlyphBlt,
+RPIPushPixels
 };
 
 void RPIChangeGC(GCPtr pGC, unsigned long mask)
@@ -512,10 +587,15 @@ void RPICloseScreen( int index, ScreenPtr pScreen )
 	ErrorF("RPICloseScreen\n");
 }
 
+void RPISetScreenPixmap( PixmapPtr pPixmap )
+{
+	ErrorF("RPISetScreenPixmap\n");
+}
+
 PixmapPtr RPIGetScreenPixmap( ScreenPtr pScreen )
 {
 	ErrorF("RPIGetScreenPixmap\n");
-	return 0;
+	return pScreen->PixmapPerDepth[0];
 }
 
 void RPIMarkWindow( WindowPtr pWin )
@@ -548,6 +628,16 @@ PixmapPtr RPIGetWindowPixmap( WindowPtr pWin )
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+
+  pScreen->width = pScrn->currentMode->HDisplay;
+  pScreen->height = pScrn->currentMode->VDisplay;
+  pScreen->x = 0;
+  pScreen->y = 0;
+  pScreen->mmWidth = pScreen->width;
+  pScreen->mmHeight = pScreen->height;
+  pScreen->whitePixel = 0xffffffff;
+  pScreen->blackPixel = 0x00000000;
+
 	ErrorF("RPIScreenInit\n");
 	pScreen->CreateScreenResources = RPICreateScreenResources;
 	pScreen->CreateGC = RPICreateGC;
@@ -576,6 +666,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->CloseScreen = RPICloseScreen;
 	pScreen->GetScreenPixmap = RPIGetScreenPixmap;
+	pScreen->SetScreenPixmap = RPISetScreenPixmap;
 	pScreen->MarkWindow = RPIMarkWindow;
 	pScreen->ValidateTree = RPIValidateTree;
 	pScreen->HandleExposures = RPIHandleExposures;
@@ -645,7 +736,6 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	}
 
 	xf86DisableRandR();
-	xf86SetBlackWhitePixels(pScreen);
 	xf86SetBackingStore(pScreen);
 	miCreateDefColormap(pScreen);
 
