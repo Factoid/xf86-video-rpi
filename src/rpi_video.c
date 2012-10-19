@@ -239,7 +239,7 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	}
 
 	// Should be auto-detecting TrueColor, doesn't...
-	if( !xf86SetDefaultVisual(pScrn, 0) )
+	if( !xf86SetDefaultVisual(pScrn, TrueColor) )
 	{
 		goto fail;
 	}
@@ -564,12 +564,14 @@ void RPIWakeupHandler( int sNum, pointer wData, unsigned long result, pointer pR
 Bool RPICreateColormap( ColormapPtr pmap )
 {
 	ErrorF("RPICreateColormap\n");
+  miInitializeColormap(pmap);
 	return TRUE;
 }
 
 void RPIInstallColormap( ColormapPtr pmap )
 {
 	ErrorF("RPIInstallColormap\n");
+  miInstallColormap(pmap);
 }
 
 void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
@@ -580,6 +582,7 @@ void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, shor
 void RPIDestroyColormap( ColormapPtr pmap )
 {
 	ErrorF("RPIDestroyColormap\n");
+  miUninstallColormap(pmap); 
 }
 
 void RPICloseScreen( int index, ScreenPtr pScreen )
@@ -660,7 +663,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->BlockHandler = RPIBlockHandler;
 	pScreen->WakeupHandler = RPIWakeupHandler;
 	pScreen->CreateColormap = RPICreateColormap;
-	pScreen->InstallColormap = RPIInstallColormap;
+  pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->ResolveColor = RPIResolveColor;
 	pScreen->DestroyColormap = RPIDestroyColormap;
 	pScreen->DestroyWindow = RPIDestroyWindow;
@@ -716,6 +719,11 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 		ErrorF("InitVisuals failed\n" );
 		goto fail;
 	}
+  if( !miScreenInit(pScreen, 0, pScrn->currentMode->HDisplay, pScrn->currentMode->VDisplay, 96, 96, 4, rootDepth, numDepths, pScreen->allowedDepths, defaultVis, numVisuals, pScreen->visuals ) )
+  {
+    ErrorF("ScreenInit failed\n");
+    goto fail;
+  }
 	pScreen->numVisuals = numVisuals;
 	pScreen->numDepths = numDepths;
 	pScreen->rootDepth = rootDepth;
