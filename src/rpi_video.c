@@ -8,6 +8,8 @@
 #include "rpi_video.h"
 #include <migc.h>
 #include <mi.h>
+#include <xf86cmap.h>
+#include <fb.h>
 
 _X_EXPORT DriverRec RPIDriver = {
 	VERSION,
@@ -265,12 +267,6 @@ static Bool RPIModeInit(ScrnInfoPtr pScrn, DisplayModePtr pMode)
 	return TRUE;
 }
 
-static Bool RPICreateScreenResources( ScreenPtr pScreen )
-{	
-	ErrorF("RPICreateScreenResources\n");
-	return TRUE;
-}
-
 void RPIPutImage( DrawablePtr pDraw, GCPtr pGC, int depth, int x, int y, int w, int h, int leftpad, int format, char* pBits )
 {
 	ErrorF("RPIPutImage\n");
@@ -426,6 +422,126 @@ miChangeClip,//	RPIChangeClip,
 miCopyClip//	RPICopyClip
 };
 	
+Bool RPICloseScreen( int index, ScreenPtr pScreen )
+{
+	ErrorF("RPICloseScreen\n");
+
+  DepthPtr depths = pScreen->allowedDepths;
+  for( int i = 0; i < pScreen->numDepths; ++i )
+  {
+    free(depths[i].vids);
+  }
+  free(depths);
+  free(pScreen->visuals);
+  return TRUE;
+}
+
+// Electing not to borrow code from fbQueryBestSize for now
+void RPIQueryBestSize( int class, unsigned short* w, unsigned short* h, ScreenPtr pScreen )
+{
+	ErrorF("RPIQueryBestSize\n");
+}
+
+Bool RPISaveScreen( ScreenPtr pScreen, int on )
+{
+	ErrorF("RPISaveScreen\n");
+  return TRUE;
+}
+
+void RPIGetImage( DrawablePtr pDraw, int sx, int sy, int w, int h, unsigned int format, unsigned long planemask, char* pdstLine )
+{
+	ErrorF("RPIGetImage\n");
+}
+
+Bool RPICreateWindow( WindowPtr pWin )
+{
+	ErrorF("RPICreateWindow\n");
+	return TRUE;
+}
+
+Bool RPIDestroyWindow( WindowPtr pWin )
+{
+  return TRUE;
+}
+
+Bool RPIPositionWindow( WindowPtr pWin, int x, int y )
+{
+	ErrorF("RPIPositionWindow\n");
+  return TRUE;
+}
+
+Bool RPIChangeWindowAttributes( WindowPtr pWin, unsigned long mask )
+{
+	ErrorF("RPIChangeWindowAttributes\n");
+  return TRUE;
+}
+
+Bool RPIRealizeWindow( WindowPtr pWin )
+{
+	ErrorF("RPIRealizeWindow\n");
+  return TRUE;
+}
+
+Bool RPIUnrealizeWindow( WindowPtr pWin )
+{
+  ErrorF("RPIUnrealizeWindow\n");
+  return TRUE;
+}
+
+int RPIValidateTree( WindowPtr pParent, WindowPtr pChild, VTKind vtk )
+{
+  ErrorF("RPIValidateTree\n");
+  return miValidateTree(pParent, pChild, vtk);
+}
+
+void RPIWindowExposures( WindowPtr pWin, RegionPtr region, RegionPtr others )
+{
+	ErrorF("RPIWindowExposures\n");
+  miWindowExposures(pWin,region,others);
+}
+
+PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
+{
+	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
+	ErrorF("RPICreatePixmap\n");
+	return fbCreatePixmapBpp( pScreen, w, h, d, 32, hint );
+}
+
+Bool RPIDestroyPixmap( PixmapPtr p )
+{
+	ErrorF("RPIDestroyPixmap\n");
+	return fbDestroyPixmap(p);
+}
+
+//miPointerConstrainCursor
+void RPIConstrainCursor( DeviceIntPtr pDev, ScreenPtr pScreen, BoxPtr pBox )
+{
+	ErrorF("RPIConstrainCursor\n");
+}
+
+void RPICursorLimits( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor, BoxPtr pHotbox, BoxPtr pTopLeft )
+{
+	ErrorF("RPICursorLimits\n");
+}
+
+Bool RPIDisplayCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
+{
+	ErrorF("RPIDisplayCursor\n");
+  return TRUE;
+}
+
+Bool RPIRealizeCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
+{
+	ErrorF("RPIRealizeCursor\n");
+  return TRUE;
+}
+
+Bool RPISetCursorPosition( DeviceIntPtr pDev, ScreenPtr pScreen, int x, int y, Bool genEvent )
+{
+	ErrorF("RPISetCursorPosition\n");
+  return TRUE;
+}
+
 static Bool RPICreateGC( GCPtr pGC )
 {
 	pGC->ops = &RPIGCOps;
@@ -435,117 +551,38 @@ static Bool RPICreateGC( GCPtr pGC )
 	return TRUE;
 }
 
-void RPIQueryBestSize( int class, unsigned short* w, unsigned short* h, ScreenPtr pScreen )
+Bool RPICreateColormap( ColormapPtr pmap )
 {
-	ErrorF("RPIQueryBestSize\n");
-}
-
-PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
-{
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
-	ErrorF("RPICreatePixmap\n");
-/*
-	PixmapPtr p = AllocatePixmap(pScreen,0);
-	p->drawable.x = 0;
-	p->drawable.y = 0;
-	p->drawable.width = w;
-	p->drawable.height = h;
-	p->drawable.depth = d;
-	p->drawable.type = DRAWABLE_PIXMAP;
-	p->drawable.class = 0;
-	p->drawable.bitsPerPixel = 32;
-	p->drawable.id = 0;
-	p->refcnt = 1;
-	p->devKind = w * 4;
-	p->usage_hint = hint;
-	p->drawable.serialNumber = NEXT_SERIAL_NUMBER;	
-	p->drawable.pScreen = pScreen;
-#ifdef COMPOSITE
-	p->screen_x = 0;
-	p->screen_y = 0;
-#endif
-	p->devPrivates = 0;
-	memset(&p->devPrivates,0,sizeof(DevUnion));
-	return p;
-*/
-	return fbCreatePixmapBpp( pScreen, w, h, d, 32, hint );
-}
- 
-void RPIGetImage( DrawablePtr pDraw, int sx, int sy, int w, int h, unsigned int format, unsigned long planemask, char* pdstLine )
-{
-	ErrorF("RPIGetImage\n");
-}
-
-void RPIDestroyPixmap( PixmapPtr p )
-{
-	fbDestroyPixmap(p);
-	ErrorF("RPIDestroyPixmap\n");
-}
-
-Bool RPICreateWindow( WindowPtr pWin )
-{
-	ErrorF("RPICreateWindow\n");
+	ErrorF("RPICreateColormap\n");
+  miInitializeColormap(pmap);
 	return TRUE;
 }
 
-void RPIDestroyWindow( WindowPtr pWin )
+void RPIDestroyColormap( ColormapPtr pmap )
 {
+  ErrorF("RPIDestroyColormap\n");
 }
 
-void RPIPositionWindow( WindowPtr pWin, int x, int y )
+void RPIInstallColormap( ColormapPtr pmap )
 {
-	ErrorF("RPIPositionWindow\n");
+	ErrorF("RPIInstallColormap\n");
+  miInstallColormap(pmap);
 }
 
-void RPIChangeWindowAttributes( WindowPtr pWin, unsigned long mask )
+void RPIUninstallColormap( ColormapPtr pmap )
 {
-	ErrorF("RPIChangeWindowAttributes\n");
+	ErrorF("RPIUninstallColormap\n");
+  miUninstallColormap(pmap); 
 }
 
-Bool RPIDeviceCursorInitialize( DeviceIntPtr pDev, ScreenPtr pScreen )
+void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
 {
-	ErrorF("RPIDeviceCursorInitialize\n");
-	return TRUE;
+	ErrorF("RPIResolveColor\n");
 }
 
-void RPIRealizeWindow( WindowPtr pWin )
+RegionPtr RPIBitmapToRegion( PixmapPtr pPixmap )
 {
-	ErrorF("RPIRealizeWindow\n");
-}
-
-void RPIWindowExposures( WindowPtr pWin, RegionPtr region, RegionPtr others )
-{
-	ErrorF("RPIWindowExposures\n");
-}
-
-void RPIRealizeCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
-{
-	ErrorF("RPIRealizeCursor\n");
-}
-
-void RPICursorLimits( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor, BoxPtr pHotbox, BoxPtr pTopLeft )
-{
-	ErrorF("RPICursorLimits\n");
-}
-
-void RPIConstrainCursor( DeviceIntPtr pDev, ScreenPtr pScreen, BoxPtr pBox )
-{
-	ErrorF("RPIConstrainCursor\n");
-}
-
-void RPISetCursorPosition( DeviceIntPtr pDev, ScreenPtr pScreen, int x, int y, Bool genEvent )
-{
-	ErrorF("RPISetCursorPosition\n");
-}
-
-void RPIDisplayCursor( DeviceIntPtr pDev, ScreenPtr pScreen, CursorPtr pCursor )
-{
-	ErrorF("RPIDisplayCursor\n");
-}
-
-void RPISaveScreen( ScreenPtr pScreen, int on )
-{
-	ErrorF("RPISaveScreen\n");
+  return RegionCreate(NULL,1);
 }
 
 void RPIBlockHandler( int sNum, pointer bData, pointer pTimeout, pointer pReadmask )
@@ -561,55 +598,46 @@ void RPIWakeupHandler( int sNum, pointer wData, unsigned long result, pointer pR
 //	ErrorF("RPIWakeupHandler\n");
 }
 
-Bool RPICreateColormap( ColormapPtr pmap )
-{
-	ErrorF("RPICreateColormap\n");
-  miInitializeColormap(pmap);
+static Bool RPICreateScreenResources( ScreenPtr pScreen )
+{	
+	ErrorF("RPICreateScreenResources\n");
+  if( !miCreateScreenResources(pScreen) )
+    return FALSE;
+
 	return TRUE;
 }
 
-void RPIInstallColormap( ColormapPtr pmap )
+PixmapPtr winPixmap;
+PixmapPtr RPIGetWindowPixmap( WindowPtr pWin )
 {
-	ErrorF("RPIInstallColormap\n");
-  miInstallColormap(pmap);
+	ErrorF("RPIGetWindowPixmap\n");
+	return winPixmap;
 }
 
-void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
+void RPISetWindowPixmap( WindowPtr pWin, PixmapPtr pPix )
 {
-	ErrorF("RPIResolveColor\n");
-}
-
-void RPIDestroyColormap( ColormapPtr pmap )
-{
-	ErrorF("RPIDestroyColormap\n");
-  miUninstallColormap(pmap); 
-}
-
-void RPICloseScreen( int index, ScreenPtr pScreen )
-{
-	ErrorF("RPICloseScreen\n");
-}
-
-void RPISetScreenPixmap( PixmapPtr pPixmap )
-{
-	ErrorF("RPISetScreenPixmap\n");
+	ErrorF("RPISetWindowPixmap\n");
+  winPixmap = pPix;
 }
 
 PixmapPtr RPIGetScreenPixmap( ScreenPtr pScreen )
 {
 	ErrorF("RPIGetScreenPixmap\n");
-	return pScreen->PixmapPerDepth[0];
+  return miGetScreenPixmap(pScreen);
+//	return pScreen->PixmapPerDepth[0];
+}
+
+void RPISetScreenPixmap( PixmapPtr pPixmap )
+{
+	ErrorF("RPISetScreenPixmap\n");
+  miSetScreenPixmap( pPixmap );
+//  pScreen->PixmapPerDepth[0] = pPixmap;
 }
 
 void RPIMarkWindow( WindowPtr pWin )
 {
 	ErrorF("RPIMarkWindow\n");
-}
-
-int RPIValidateTree( WindowPtr pParent, WindowPtr pChild, VTKind vtk )
-{
-	ErrorF("RPIValidateTree\n");
-	return 0;
+  miMarkWindow(pWin);
 }
 
 void RPIHandleExposures( WindowPtr pWin )
@@ -617,80 +645,100 @@ void RPIHandleExposures( WindowPtr pWin )
 	ErrorF("RPIHandleExposures\n");
 }
 
-void RPISetWindowPixmap( WindowPtr pWin, PixmapPtr pPix )
+Bool RPIDeviceCursorInitialize( DeviceIntPtr pDev, ScreenPtr pScreen )
 {
-	ErrorF("RPISetWindowPixmap\n");
+	ErrorF("RPIDeviceCursorInitialize\n");
+	return TRUE;
 }
 
-PixmapPtr RPIGetWindowPixmap( WindowPtr pWin )
+void RPILoadPalette( ScrnInfoPtr pScrn, int numColors, int *indicies, LOCO *colors, VisualPtr pVisual )
 {
-	ErrorF("RPIGetWindowPixmap\n");
-	return 0;
 }
 
 static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv )
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 
-  pScreen->width = pScrn->currentMode->HDisplay;
-  pScreen->height = pScrn->currentMode->VDisplay;
-  pScreen->x = 0;
-  pScreen->y = 0;
-  pScreen->mmWidth = pScreen->width;
-  pScreen->mmHeight = pScreen->height;
-  pScreen->whitePixel = 0xffffffff;
-  pScreen->blackPixel = 0x00000000;
-
-	ErrorF("RPIScreenInit\n");
-	pScreen->CreateScreenResources = RPICreateScreenResources;
-	pScreen->CreateGC = RPICreateGC;
+  pScreen->defColormap = FakeClientID(0);  
+  ErrorF("RPIScreenInit\n");
+	pScreen->CloseScreen = RPICloseScreen;
 	pScreen->QueryBestSize = RPIQueryBestSize;
-	pScreen->CreatePixmap = RPICreatePixmap;
+	pScreen->SaveScreen = RPISaveScreen;
 	pScreen->GetImage = RPIGetImage;
-	pScreen->DestroyPixmap = RPIDestroyPixmap;
-	pScreen->CreateWindow = RPICreateWindow;
+  //pScreen->GetSpans = RPIGetSpans;
+	//pScreen->SourceValidate = RPISourceValidate;
+
+  pScreen->CreateWindow = RPICreateWindow;
+	pScreen->DestroyWindow = RPIDestroyWindow;
 	pScreen->PositionWindow = RPIPositionWindow;
-	pScreen->DeviceCursorInitialize = RPIDeviceCursorInitialize;
 	pScreen->ChangeWindowAttributes = RPIChangeWindowAttributes;
 	pScreen->RealizeWindow = RPIRealizeWindow;
+  pScreen->UnrealizeWindow = RPIUnrealizeWindow;
+	pScreen->ValidateTree = RPIValidateTree;
+  //pScreen->PostValidateTree = RPIPostValidateTree;
 	pScreen->WindowExposures = RPIWindowExposures;
-	pScreen->RealizeCursor = RPIRealizeCursor;
-	pScreen->CursorLimits = RPICursorLimits;
+  //pScreen->CopyWindow = RPICopyWindow;
+  //pScreen->ClearToBackground = RPIClearToBackground;
+	//pScreen->ClipNotify = RPIClipNotify;
+ 	//pScreen->RestackWindow = RPIRestackWindow;
+
+	pScreen->CreatePixmap = RPICreatePixmap;
+	pScreen->DestroyPixmap = RPIDestroyPixmap;
+ 
+	//pScreen->RealizeFont = RPIRealizeFont;
+	//pScreen->UnrealizeFont = RPIUnrealizeFont;
+
 	pScreen->ConstrainCursor = RPIConstrainCursor;
-	pScreen->SetCursorPosition = RPISetCursorPosition;
+  //pScreen->ConstrainCursorHarder = RPIConstrainCursorHarder;
+	pScreen->CursorLimits = RPICursorLimits;
 	pScreen->DisplayCursor = RPIDisplayCursor;
-	pScreen->SaveScreen = RPISaveScreen;
+	pScreen->RealizeCursor = RPIRealizeCursor;
+	//pScreen->UnrealizeCursor = RPIUnrealizeCursor;
+	//pScreen->RecolorCursor = RPIRecolorCursor;
+	//pScreen->SetCursorPosition = RPISetCursorPosition;
+	
+  pScreen->CreateGC = RPICreateGC;
+ 
+	pScreen->CreateColormap = RPICreateColormap;
+	pScreen->DestroyColormap = RPIDestroyColormap;
+  pScreen->InstallColormap = RPIInstallColormap;
+	pScreen->UninstallColormap = RPIUninstallColormap;
+	//pScreen->ListInstalledColormaps = RPIInstalledColormaps;
+	//pScreen->StoreColors = RPIStoreColors;
+	pScreen->ResolveColor = RPIResolveColor;
+  
+  pScreen->BitmapToRegion = RPIBitmapToRegion;
+  //pScreen->SendGraphicsExpose
+
 	pScreen->BlockHandler = RPIBlockHandler;
 	pScreen->WakeupHandler = RPIWakeupHandler;
-	pScreen->CreateColormap = RPICreateColormap;
-  pScreen->InstallColormap = RPIInstallColormap;
-	pScreen->ResolveColor = RPIResolveColor;
-	pScreen->DestroyColormap = RPIDestroyColormap;
-	pScreen->DestroyWindow = RPIDestroyWindow;
-	pScreen->CloseScreen = RPICloseScreen;
+  
+  pScreen->CreateScreenResources = RPICreateScreenResources;
+	//pScreen->ModifyPixmapHeader
+
+	pScreen->GetWindowPixmap = RPIGetWindowPixmap;
+	pScreen->SetWindowPixmap = RPISetWindowPixmap;
 	pScreen->GetScreenPixmap = RPIGetScreenPixmap;
 	pScreen->SetScreenPixmap = RPISetScreenPixmap;
-	pScreen->MarkWindow = RPIMarkWindow;
-	pScreen->ValidateTree = RPIValidateTree;
-	pScreen->HandleExposures = RPIHandleExposures;
-	pScreen->SetWindowPixmap = RPISetWindowPixmap;
-	pScreen->GetWindowPixmap = RPIGetWindowPixmap;
-/*
-	pScreen->ClipNotify = RPIClipNotify;
-	pScreen->GetSpans = RPIGetSpans;
-	pScreen->GetStaticColormap = RPIGetStaticColormap;
-	pScreen->ListInstalledColormaps = RPIInstalledColormaps;
-	pScreen->PointerNonInterestBox = RPIPointerNonInterestBox;
-	pScreen->RealizeFont = RPIRealizeFont;
-	pScreen->RecolorCursor = RPIRecolorCursor;
-	pScreen->StoreColors = RPIStoreColors;
-	pScreen->UninstallColormap = RPIUninstallColormape;
-	pScreen->UnrealizeCursor = RPIUnrealizeCursor;
-	pScreen->UnrealizeFont = RPIUnrealizeFont;
-	pScreen->UnrealizeWindow = RPIUnrealizeWindow;
-*/	
 
-	ErrorF("PictureInit\n");
+	pScreen->MarkWindow = RPIMarkWindow;
+  //pScreen->MarkOverlappedWindows;
+  //pScreen->ConfigNotify;
+  //pScreen->MoveWindow;
+  //pScreen->ResizeWindow;
+  //pScreen->GetLayerWindow;
+	pScreen->HandleExposures = RPIHandleExposures;
+  //pScreen->ReparentWindow;
+
+  //pScreen->SetShape;
+
+  //pScreen->ChangeBorderWidth;
+  //pScreen->MarkUnealizedWindow;
+
+  pScreen->DeviceCursorInitialize = RPIDeviceCursorInitialize;
+  //pScreen->DeviceCursorCleanup;
+	
+  ErrorF("PictureInit\n");
 	if( !PictureInit( pScreen, NULL, 0 ) )
 	{
 		ErrorF("PictureInit failed\n");
@@ -745,7 +793,17 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 
 	xf86DisableRandR();
 	xf86SetBackingStore(pScreen);
-	miCreateDefColormap(pScreen);
+	if( !miCreateDefColormap(pScreen) )
+  {
+    ErrorF("miCreateDefColormap failed\n");
+    goto fail;
+  }
+//  int flags = CMAP_PALETTED_TRUECOLOR;
+//  if( !xf86HandleColormaps(pScreen, 256, 8, NULL, NULL, flags) )
+//  {
+//    ErrorF("xf86HandleColormaps failed\n");
+//    goto fail;
+//  }
 
 	ErrorF("ScreenInit Success\n");
 	return TRUE;
