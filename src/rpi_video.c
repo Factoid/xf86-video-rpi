@@ -575,6 +575,11 @@ void RPIUninstallColormap( ColormapPtr pmap )
   miUninstallColormap(pmap); 
 }
 
+int RPIListInstalledColormaps( ScreenPtr pScreen, XID* pmaps )
+{
+  return miListInstalledColormaps(pScreen,pmaps);
+}
+
 void RPIResolveColor( short unsigned int* pred, short unsigned int* pgreen, short unsigned int* pblue, VisualPtr pVisual )
 {
 	ErrorF("RPIResolveColor\n");
@@ -607,17 +612,22 @@ static Bool RPICreateScreenResources( ScreenPtr pScreen )
 	return TRUE;
 }
 
-PixmapPtr winPixmap;
 PixmapPtr RPIGetWindowPixmap( WindowPtr pWin )
 {
 	ErrorF("RPIGetWindowPixmap\n");
-	return winPixmap;
+  // The pixmap for the root window is stored in it's screen devPrivate
+  if( pWin->parent == 0 )
+  {
+    return pWin->drawable.pScreen->devPrivate;
+  }
+
+  return _fbGetWindowPixmap(pWin);
 }
 
 void RPISetWindowPixmap( WindowPtr pWin, PixmapPtr pPix )
 {
 	ErrorF("RPISetWindowPixmap\n");
-  winPixmap = pPix;
+  _fbSetWindowPixmap(pWin,pPix);
 }
 
 PixmapPtr RPIGetScreenPixmap( ScreenPtr pScreen )
@@ -659,6 +669,11 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 
+  if( !fbAllocatePrivates(pScreen,NULL) )
+  {
+    ErrorF("Unable to allocate fb privates\n");
+    goto fail;
+  }
   pScreen->defColormap = FakeClientID(0);  
   ErrorF("RPIScreenInit\n");
 	pScreen->CloseScreen = RPICloseScreen;
@@ -703,7 +718,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 	pScreen->DestroyColormap = RPIDestroyColormap;
   pScreen->InstallColormap = RPIInstallColormap;
 	pScreen->UninstallColormap = RPIUninstallColormap;
-	//pScreen->ListInstalledColormaps = RPIInstalledColormaps;
+	pScreen->ListInstalledColormaps = RPIListInstalledColormaps;
 	//pScreen->StoreColors = RPIStoreColors;
 	pScreen->ResolveColor = RPIResolveColor;
   
