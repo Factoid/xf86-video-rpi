@@ -33,16 +33,18 @@ typedef enum {
 } RPIopts;
 
 typedef struct {
-	Bool noAccel;
-	Bool hwCursor;
-	unsigned char* fbmem;
-	unsigned char* fbstart;	
-	EntityInfoPtr EntityInfo;
-	CloseScreenProcPtr CloseScreen;
-	OptionInfoPtr Options;
-   	EGLDisplay display;
-   	EGLSurface surface;
-   	EGLContext context;
+//	Bool noAccel;
+//	Bool hwCursor;
+//	unsigned char* fbmem;
+//	unsigned char* fbstart;	
+//	EntityInfoPtr EntityInfo;
+//	CloseScreenProcPtr CloseScreen;
+//	OptionInfoPtr Options;
+  int width;
+  int height;
+  EGLDisplay display;
+  EGLSurface surface;
+  EGLContext context;
 } RPIRec, *RPIPtr, *FBDevPtr;
 
 static void RPIIdentify(int);

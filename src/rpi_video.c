@@ -10,10 +10,11 @@
 #include <mi.h>
 #include <xf86cmap.h>
 #include <fb.h>
+#include <GLES/gl.h>
 
 _X_EXPORT DriverRec RPIDriver = {
 	VERSION,
-	RPI_DRIVER_NAME,
+  RPI_DRIVER_NAME,
 	RPIIdentify,
 	RPIProbe,
 	RPIAvailableOptions,
@@ -48,7 +49,7 @@ static const OptionInfoRec RPIOptions[] = {
 	{ -1,               NULL,        OPTV_NONE,    {0}, FALSE }
 };
 
-static void printConfig( ScrnInfoPtr scrn, EGLDisplay disp, EGLConfig config )
+static void printConfig( EGLDisplay disp, EGLConfig config )
 {
    EGLint val;
    const char* names[] = { "EGL_BUFFER_SIZE", "EGL_RED_SIZE", "EGL_GREEN_SIZE", "EGL_BLUE_SIZE", "EGL_ALPHA_SIZE", "EGL_CONFIG_CAVEAT", "EGL_CONFIG_ID", "EGL_DEPTH_SIZE", "EGL_LEVEL", "EGL_MAX_PBUFFER_WIDTH", "EGL_MAX_PBUFFER_HEIGHT", "EGL_MAX_PBUFFER_PIXELS", "EGL_NATIVE_RENDERABLE", "EGL_NATIVE_VISUAL_ID", "EGL_NATIVE_VISUAL_TYPE", "EGL_SAMPLE_BUFFERS", "EGL_SAMPLES", "EGL_STENCIL_", "EGL_SURFACE_TYPE", "EGL_TRANSPARENT_TYPE", "EGL_TRANSPARENT_RED", "EGL_TRANSPARENT_GREEN", "EGL_TRANSPARENT_BLUE" };
@@ -154,20 +155,43 @@ static void RPISave( ScrnInfoPtr pScrn )
 	ErrorF("RPISave\n");
 }
 
-static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
+EGLSurface RPICreateGLSurface( int w, int h, EGLDisplay display, EGLConfig config )
 {
-	ErrorF("Start PreInit\n");
+  static EGL_DISPMANX_WINDOW_T nativewindow;
 
-	pScrn->monitor = pScrn->confScreen->monitor;
+  VC_RECT_T dst_rect;  
+  dst_rect.x = 0;
+  dst_rect.y = 0;
+  dst_rect.width = w;
+  dst_rect.height = h;
 
-	RPIGetRec(pScrn);
-	
+  VC_RECT_T src_rect;
+  src_rect.x = 0;
+  src_rect.y = 0;
+  src_rect.width = w << 16;
+  src_rect.height = h << 16;
+
+  DISPMANX_DISPLAY_HANDLE_T dispman_display = vc_dispmanx_display_open( 0 );
+  DISPMANX_UPDATE_HANDLE_T dispman_update = vc_dispmanx_update_start( 0 );
+  
+  DISPMANX_ELEMENT_HANDLE_T dispman_element = vc_dispmanx_element_add( dispman_update, dispman_display, 0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, 0, 0, 0 );
+
+  nativewindow.element = dispman_element;
+  nativewindow.width = w;
+  nativewindow.height = h;
+  vc_dispmanx_update_submit_sync(dispman_update);
+  return eglCreateWindowSurface( display, config, &nativewindow, NULL );
+}
+
+Bool RPIEnterVT( int, int );
+
+Bool RPIStartGL( RPIPtr state )
+{
 	bcm_host_init();
 	EGLConfig config;
 	EGLBoolean result;
 	EGLint num_config;
 
-	RPIPtr state = RPIPTR(pScrn);
 	static const EGLint attribute_list[] =
 	{
 		EGL_RED_SIZE, 8,
@@ -195,7 +219,7 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	// get an appropriate EGL frame buffer configuration
 	result = eglChooseConfig(state->display, attribute_list, &config, 1, &num_config);
 	assert(EGL_FALSE != result);
-	printConfig(pScrn,state->display,config);
+	printConfig(state->display,config);
 
 	// get an appropriate EGL frame buffer configuration
 	//   result = eglBindAPI(EGL_OPENGL_ES_API);
@@ -206,18 +230,35 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, context_attributes);
 	if( state->context == EGL_NO_CONTEXT )
 	{
-		ERROR_MSG("No context!");
-		goto fail;
+		ErrorF("No context!\n");
+		return FALSE;
 	} else
 	{
-		INFO_MSG("Context get! %p", state->context);
+		ErrorF("Context get! %p\n", state->context);
 	}
 	assert(state->context!=EGL_NO_CONTEXT);
 
 	int bpp;
 	eglGetConfigAttrib(state->display,config,EGL_BUFFER_SIZE,&bpp);
+	graphics_get_display_size(0, &state->width, &state->height );	
+  state->surface = RPICreateGLSurface(state->width, state->height, state->display, config );
+  assert( state->surface != EGL_NO_SURFACE );
 
-	if( !xf86SetDepthBpp(pScrn,0,0,bpp,0) )
+  result = eglMakeCurrent( state->display, state->surface, state->surface, state->context );
+  assert( EGL_FALSE != result);
+  RPIEnterVT(0,0);
+  return TRUE;
+}
+
+static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
+{
+	ErrorF("Start PreInit\n");
+
+	pScrn->monitor = pScrn->confScreen->monitor;
+
+	RPIGetRec(pScrn);
+
+  if( !xf86SetDepthBpp(pScrn,0,0,32,0) )
 	{
 		goto fail;
 	}
@@ -247,12 +288,15 @@ static Bool RPIPreInit(ScrnInfoPtr pScrn,int flags)
 	}
 
 	pScrn->currentMode = calloc(1,sizeof(DisplayModeRec));
-	pScrn->zoomLocked = TRUE;
 	graphics_get_display_size(0, &pScrn->currentMode->HDisplay, &pScrn->currentMode->VDisplay );	
+  pScrn->zoomLocked = TRUE;
 	pScrn->modes = xf86ModesAdd(pScrn->modes,pScrn->currentMode);
 	//	intel_glamor_pre_init(pScrn);	
 
-	ErrorF("PreInit Success\n");
+	RPIPtr state = RPIPTR(pScrn);
+  RPIStartGL(state);
+ 
+  ErrorF("PreInit Success\n");
 	return TRUE;
 
 fail:
@@ -444,7 +488,6 @@ void RPIQueryBestSize( int class, unsigned short* w, unsigned short* h, ScreenPt
 
 Bool RPISaveScreen( ScreenPtr pScreen, int on )
 {
-	ErrorF("RPISaveScreen\n");
   return TRUE;
 }
 
@@ -500,9 +543,12 @@ void RPIWindowExposures( WindowPtr pWin, RegionPtr region, RegionPtr others )
   miWindowExposures(pWin,region,others);
 }
 
+void RPIClearToBackground( WindowPtr pWin, int x, int y, int w, int h, Bool genExposure )
+{
+}
+
 PixmapPtr RPICreatePixmap( ScreenPtr pScreen, int w, int h, int d, int hint )
 {
-	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum]; 
 	ErrorF("RPICreatePixmap\n");
 	return fbCreatePixmapBpp( pScreen, w, h, d, 32, hint );
 }
@@ -693,7 +739,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
   //pScreen->PostValidateTree = RPIPostValidateTree;
 	pScreen->WindowExposures = RPIWindowExposures;
   //pScreen->CopyWindow = RPICopyWindow;
-  //pScreen->ClearToBackground = RPIClearToBackground;
+  pScreen->ClearToBackground = RPIClearToBackground;
 	//pScreen->ClipNotify = RPIClipNotify;
  	//pScreen->RestackWindow = RPIRestackWindow;
 
@@ -820,6 +866,7 @@ static Bool RPIScreenInit(int scrnNum, ScreenPtr pScreen, int argc, char** argv 
 //    goto fail;
 //  }
 
+
 	ErrorF("ScreenInit Success\n");
 	return TRUE;
 fail:
@@ -838,15 +885,26 @@ static void RPIAdjustFrame(int scrnNum, int x, int y, int flags)
 	ErrorF( "RPIAdjustFrame\n" );
 }
 
-static Bool RPIEnterVT(int scrnNum, int flags)
+static Bool RPIEnterVT(int scrnNum, int flags )
 {
-	ErrorF("RPIEnterVT\n");
+	ScrnInfoPtr pScrn = xf86Screens[scrnNum];
+	RPIPtr state = RPIPTR(pScrn);
+	
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear( GL_COLOR_BUFFER_BIT );
+  eglSwapBuffers(state->display, state->surface);
+	ErrorF("RPIEnterVT %i %i\n", scrnNum, flags);
 	return TRUE;
 }
 
 static void RPILeaveVT(int scrnNum, int flags)
 {
 	ErrorF("RPILeaveVT\n" );
+	ScrnInfoPtr pScrn = xf86Screens[scrnNum];
+	RPIPtr state = RPIPTR(pScrn);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClear( GL_COLOR_BUFFER_BIT );
+  eglSwapBuffers(state->display, state->surface);
 }
 
 static void RPIFreeScreen(int scrnNum, int flags)
