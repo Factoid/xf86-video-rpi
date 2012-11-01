@@ -204,7 +204,7 @@ Bool RPIStartGL( RPIPtr state )
 
 	static const EGLint context_attributes[] = 
 	{
-		EGL_CONTEXT_CLIENT_VERSION, 2,
+		EGL_CONTEXT_CLIENT_VERSION, 1,
 		EGL_NONE
 	};
 
@@ -227,7 +227,8 @@ Bool RPIStartGL( RPIPtr state )
 	//   check();
 
 	// create an EGL rendering context
-	state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, context_attributes);
+	state->context = eglCreateContext(state->display, config, EGL_NO_CONTEXT, 0);
+// context_attributes);
 	if( state->context == EGL_NO_CONTEXT )
 	{
 		ErrorF("No context!\n");
@@ -361,9 +362,49 @@ void RPIPolyFillRect( DrawablePtr pDraw, GCPtr pGC, int nRects, xRectangle* rect
 	ErrorF("RPIPolyFillRect\n");
 }
 
+void setPoint( GLfloat* arr, int i, float x, float y, float z )
+{
+  arr[i*3] = x;
+  arr[i*3+1] = y;
+  arr[i*3+2] = z;
+}
+
 void RPIPolyFillArc( DrawablePtr pDraw, GCPtr pGC, int nArcs, xArc* arcs )
 {
-	ErrorF("RPIPolyFillArc\n");
+	ScrnInfoPtr pScrn = xf86Screens[0];
+	RPIPtr state = RPIPTR(pScrn);
+	
+  ErrorF("RPIPolyFillArc nArcs: %i\n", nArcs); 
+  const int nPoints = 16 * 4;
+  const int nFloats = (nPoints+2)*3;
+  GLfloat* quadx = malloc( sizeof(GLfloat) * nFloats );
+  setPoint(quadx, 0, 0.5f, 0.5f, 10);
+  for( int i = 2; i <= nPoints; ++i )
+  {
+     setPoint(quadx, i, cos( (float)(i-1)/(float)nPoints * 2.0f * M_PI ) / 2.0f + 0.5f, sin( (float)(i-1)/(float)nPoints * 2.0f * M_PI ) / 2.0f + 0.5f, 10 );
+  }
+  setPoint(quadx, 1, cos( 0 )/2.0f + 0.5f, sin( 0 )/2.0f + 0.5f, 10 );
+  setPoint(quadx, nPoints+1, cos( 0 )/2.0f + 0.5f, sin( 0 )/2.0f + 0.5f, 10 );
+
+  glClearColor(1.0f,0.0f,0.0f,1.0f);
+  glClear( GL_COLOR_BUFFER_BIT );
+  glEnableClientState( GL_VERTEX_ARRAY );
+  glVertexPointer( 3, GL_FLOAT, 0, quadx );
+  glColor4f(1.0f,1.0f,0.0f,1.0f);
+  
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  glOrthof(0,state->width,state->height,0, -100, 100 );
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  glTranslatef(0,0,0.0f);
+  glScalef(100,100,1.0f);
+  glDrawArrays( GL_TRIANGLE_FAN, 0, nPoints+2 );
+
+  free(quadx);
+
+  eglSwapBuffers(state->display, state->surface);
 }
 
 void RPIPolyText8( DrawablePtr pDraw, GCPtr pGC, int x, int y, int count, char* chars )
@@ -431,7 +472,10 @@ void RPIChangeGC(GCPtr pGC, unsigned long mask)
 
 void RPIValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr pDraw )
 {
-	ErrorF("RPIValidateGC\n");
+//	ErrorF("RPIValidateGC\n");
+//	ScrnInfoPtr pScrn = xf86Screens[0];
+//	RPIPtr state = RPIPTR(pScrn);
+//  eglSwapBuffers(state->display, state->surface);
 }
 /*
 void RPICopyGC()
@@ -890,8 +934,14 @@ static Bool RPIEnterVT(int scrnNum, int flags )
 	ScrnInfoPtr pScrn = xf86Screens[scrnNum];
 	RPIPtr state = RPIPTR(pScrn);
 	
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
   glClear( GL_COLOR_BUFFER_BIT );
+  glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
+  glViewport( 0, 0, (GLsizei)state->width, (GLsizei)state->height );
+
+  glMatrixMode( GL_PROJECTION );
+  glLoadIdentity();
+  glOrthof(0,state->width,state->height,0, 1, 100 );
   eglSwapBuffers(state->display, state->surface);
 	ErrorF("RPIEnterVT %i %i\n", scrnNum, flags);
 	return TRUE;
